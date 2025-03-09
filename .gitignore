@@ -178,3 +178,5 @@ lib64
 lib64/
 bin/
 pyvenv.cfg
+
+.idea/
