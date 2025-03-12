@@ -1,5 +1,5 @@
 from enum import Enum
-from typing import Iterable, Self
+from typing import Self
 
 class SimplexOperators(Enum):
     EQUAL = 1
@@ -10,19 +10,26 @@ class SimplexMaxOrMin(Enum):
     MAX = 1
     MIN = 2
 
-class SimplexFunction:
-    def __init__(self, *args: Iterable[float], operator: SimplexOperators, constant: float):
+class SimplexObjectiveFunction:
+    def __init__(self, min_or_max: SimplexMaxOrMin, *args: float):
+        pass
+
+class SimplexConstraintFunction:
+    def __init__(self, operator: SimplexOperators, *args: float):
         pass
 
 class Simplex:
-    def __init__(self):
+    def __init__(self, objective_function: SimplexObjectiveFunction, *args: SimplexConstraintFunction):
+        pass
+
+    def solve(self):
         pass
 
 class SimplexBuilder:
-    def __init__(self, operation: SimplexMaxOrMin):
+    def __init__(self, objective_function: SimplexObjectiveFunction):
         pass
 
-    def add_constraint(self) -> Self:
+    def add_constraint(self, constraint: SimplexConstraintFunction) -> Self:
         return self
 
     def build(self) -> Simplex:
@@ -32,4 +39,4 @@ class SimplexBuilder:
 
 
 if __name__ == "__main__":
-    pass
+    a = SimplexConstraintFunction(SimplexOperators.EQUAL,1.0, 10.2)
