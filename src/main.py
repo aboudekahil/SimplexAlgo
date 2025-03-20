@@ -1,5 +1,6 @@
 from enum import Enum
 from typing import Self
+from abc import ABC
 
 class SimplexOperators(Enum):
     EQUAL = 1
@@ -20,20 +21,34 @@ class SimplexConstraintFunction:
 
 class Simplex:
     def __init__(self, objective_function: SimplexObjectiveFunction, *args: SimplexConstraintFunction):
-        pass
+        self.is_solved = False
+        self.original_matrix = [[]]
 
     def solve(self):
         pass
 
 class SimplexBuilder:
-    def __init__(self, objective_function: SimplexObjectiveFunction):
-        pass
+    def __init__(self):
+        self.objective_function = None
+        self.constraints = []
+        self.num_vars = -1
+
 
     def add_constraint(self, constraint: SimplexConstraintFunction) -> Self:
+        self.constraints.append(constraint)
         return self
 
     def build(self) -> Simplex:
-        pass
+        if self.objective_function is None:
+            raise ValueError("Objective function for simplex not provided")
+
+        if len(self.constraints) == 0:
+            raise ValueError("No constraints provided")
+
+        if self.num_vars <= 0:
+            raise ValueError("No variables")
+
+        return Simplex(self.objective_function, *self.constraints)
 
 
 
