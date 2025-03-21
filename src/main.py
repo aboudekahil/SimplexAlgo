@@ -62,7 +62,18 @@ class SimplexConstraintFunction(SimplexFunction):
 
     def __str__(self):
         str_rep = "".join(
-            map(lambda x: f"({x[1]}x{x[0] + 1}) + ", enumerate(self.values[:-1]))) + f" <= {self.values[-1]}"
+            map(lambda x: f"({x[1]}x{x[0] + 1}) + ", enumerate(self.values[:-2])))
+
+        str_rep += f"({len(self.values)-2}x{self.values[-2]})"
+
+        match self.operator:
+            case SimplexOperators.EQUAL:
+                str_rep += f"  = {self.values[-1]}"
+            case SimplexOperators.LESS_THAN_OR_EQUAL:
+                str_rep += f" <= {self.values[-1]}"
+            case SimplexOperators.GREATER_THAN_OR_EQUAL:
+                str_rep += f" >= {self.values[-1]}"
+
         return str_rep
 
 
@@ -238,6 +249,7 @@ if __name__ == "__main__":
                                             SimplexVariableDomains.UNRESTRICTED)
                         .set_objective_function(SimplexObjectiveFunction(SimplexMaxOrMin.MAX, 1, 1, 2, 0))
                         .add_constraint(SimplexConstraintFunction(SimplexOperators.LESS_THAN_OR_EQUAL, 0, 1, 3, 4))
+                        .add_constraint(SimplexConstraintFunction(SimplexOperators.EQUAL, 4, 2, 7, 100))
                         .set_to_standard_form()
                         .build())
 
