@@ -21,3 +21,7 @@ source bin/activate.fish
 ```shell
 pip install -r requirements.txt
 ```
+
+# TODO
+
+- [ ] Use fractions from `fraction` instead of floats

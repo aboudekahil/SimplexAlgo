@@ -1,7 +1,6 @@
 from enum import Enum, auto, unique
 from typing import Self, Optional
 from abc import ABC, abstractmethod
-from urllib.parse import uses_fragment
 
 
 @unique
@@ -27,7 +26,25 @@ class SimplexMaxOrMin(Enum):
 class SimplexFunction(ABC):
     @abstractmethod
     def num_vars(self):
-        raise NotImplementedError
+        # TODO write not implemented error
+        raise NotImplementedError()
+
+
+class SimplexNotFeasible:
+    def __init__(self):
+        self.msg = "Linear problem is not feasible"
+
+    def __str__(self):
+        return self.msg
+
+
+# TODO fix naming
+class SimplexSolutions:
+    def __init__(self, *values: float):
+        self.values = list(values)
+
+
+SimplexSolution = SimplexNotFeasible | SimplexSolutions
 
 
 class SimplexObjectiveFunction(SimplexFunction):
@@ -64,7 +81,7 @@ class SimplexConstraintFunction(SimplexFunction):
         str_rep = "".join(
             map(lambda x: f"({x[1]}x{x[0] + 1}) + ", enumerate(self.values[:-2])))
 
-        str_rep += f"({len(self.values)-2}x{self.values[-2]})"
+        str_rep += f"({len(self.values) - 2}x{self.values[-2]})"
 
         match self.operator:
             case SimplexOperators.EQUAL:
@@ -79,17 +96,66 @@ class SimplexConstraintFunction(SimplexFunction):
 
 class Simplex:
     def __init__(self):
+        self.__tableau: Optional[list[list[float]]] = None
+        self.__pivot = None
         self.num_vars = -1
-        self.objective_function = None
-        self.constraints = None
-        self.is_solved = False
+        self.objective_function: Optional[SimplexObjectiveFunction] = None
+        self.constraints: Optional[list[SimplexConstraintFunction]] = None
         self.domains = None
 
-    def solve(self) -> Self:
-        pass
+    def solve(self) -> SimplexSolution:
 
-    def check_is_solved(self) -> bool:
-        return False
+        self.__tableau = self.__create_tableau()
+
+
+        while not self.__is_solved():
+            pivot = self.__find_pivot()
+            if pivot[1] < 0:
+                return SimplexNotFeasible()
+
+            self.__fix_pivot(pivot)
+
+        return self.__get_solution()
+
+    def __is_solved(self):
+        is_solved = True
+
+        for i, x in enumerate(self.__tableau[-1]):
+            if x < 0 and i != len(self.__tableau[-1]) - 1:
+                is_solved = False
+
+        return is_solved
+
+    def __find_pivot(self) -> tuple[int, int]:
+        entering_indx = self.__get_entering_var()
+        leaving_indx = self.__get_leaving_var(entering_indx)
+        return entering_indx, leaving_indx
+
+    def __fix_pivot(self, pivot_indx: tuple[int, int]):
+        j, i = pivot_indx
+
+        pivot = self.__tableau[i][j]
+        self.__tableau[i] = [element / pivot for element in self.__tableau[i]]
+
+        for indx, row in enumerate(self.__tableau):
+            if indx != i:
+                row_scale = [y * self.__tableau[indx][j] for y in self.__tableau[i]]
+                self.__tableau[indx] = [x - y for x, y in zip(self.__tableau[indx], row_scale)]
+
+    def __get_solution(self) -> SimplexSolutions:
+        solution = {'z': self.__tableau[-1][-1]}
+
+        for i, row in enumerate(self.__tableau[:-1]):
+            for j, col in enumerate(self.__tableau[i]):
+                if self.__tableau[i][j] == 1:
+                    for i2, row in enumerate(self.__tableau):
+                        if i2 != i and self.__tableau[i2][j] != 0:
+                            break
+                    else:
+                        solution[f"x{j + 1}"] = row[-1]
+
+
+        return SimplexSolutions(self.__tableau[-1][-1])
 
     def __str__(self):
         str_rep = f"""
@@ -111,6 +177,60 @@ class Simplex:
                     str_rep += f"x{indx + 1} in R\n"
 
         return str_rep
+
+    def __create_tableau(self) -> list[list[float]]:
+        tableau = []
+        var_to_add = 0
+        for indx, constraint in enumerate(self.constraints):
+            if constraint.operator == SimplexOperators.LESS_THAN_OR_EQUAL:
+                self.__add_slack_variable(indx)
+
+            tableau.append(constraint.values)
+
+        z_arr = list(map(lambda x: -x, self.objective_function.values[:-1])) + [self.objective_function.values[-1]]
+        tableau.append(z_arr)
+        return tableau
+
+    def __get_entering_var(self):
+        z_arr = self.__tableau[-1]
+        smallest_indx = 0
+        smallest = z_arr[smallest_indx]
+
+        for indx, val in enumerate(z_arr):
+            if val < smallest:
+                smallest = val
+                smallest_indx = indx
+
+        return smallest_indx
+
+    def __get_leaving_var(self, entering_indx) -> int:
+        skip = 0
+        min_ratio_indx = -1
+        min_ratio = 0
+
+        for indx, x in enumerate(self.__tableau):
+            if x[entering_indx] != 0 and x[-1] / x[entering_indx] > 0:
+                skip = indx
+                min_ratio_indx = indx
+                min_ratio = x[-1] / x[entering_indx]
+                break
+
+        if min_ratio > 0:
+            for indx, x in enumerate(self.__tableau):
+                if indx > skip and x[entering_indx] > 0:
+                    ratio = x[-1] / x[entering_indx]
+                    if min_ratio > ratio:
+                        min_ratio = ratio
+                        min_ratio_indx = indx
+
+        return min_ratio_indx
+
+    def __add_slack_variable(self, indx: int):
+        for i, constraint in enumerate(self.constraints):
+            constraint.values.insert(len(constraint.values) - 1, 1 if i == indx else 0)
+
+        self.objective_function.values.insert(len(self.objective_function.values) - 1, 0)
+        self.num_vars += 1
 
 
 class SimplexBuilder:
@@ -205,7 +325,6 @@ class SimplexBuilder:
         simplex.num_vars = self.__num_vars
         simplex.objective_function = self.__objective_function
         simplex.constraints = self.__constraints
-        simplex.is_solved = simplex.check_is_solved()
         simplex.domains = self.__domains
 
         return simplex
@@ -244,13 +363,13 @@ class SimplexBuilder:
 
 if __name__ == "__main__":
     simplex: Simplex = (SimplexBuilder()
-                        .set_number_of_vars(3, SimplexVariableDomains.GREATER_THAN_ZERO,
-                                            SimplexVariableDomains.GREATER_THAN_ZERO,
-                                            SimplexVariableDomains.UNRESTRICTED)
-                        .set_objective_function(SimplexObjectiveFunction(SimplexMaxOrMin.MAX, 1, 1, 2, 0))
-                        .add_constraint(SimplexConstraintFunction(SimplexOperators.LESS_THAN_OR_EQUAL, 0, 1, 3, 4))
-                        .add_constraint(SimplexConstraintFunction(SimplexOperators.EQUAL, 4, 2, 7, 100))
+                        .set_number_of_vars(2, SimplexVariableDomains.GREATER_THAN_ZERO,
+                                            SimplexVariableDomains.GREATER_THAN_ZERO)
+                        .set_objective_function(SimplexObjectiveFunction(SimplexMaxOrMin.MAX, 1, 1, 0))
+                        .add_constraint(SimplexConstraintFunction(SimplexOperators.LESS_THAN_OR_EQUAL, 1, 2, 24))
                         .set_to_standard_form()
                         .build())
 
-    print(simplex)
+    answer = simplex.solve()
+
+    print(answer.values)
