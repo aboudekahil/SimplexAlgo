@@ -98,10 +98,11 @@ class Simplex:
     def __init__(self):
         self.__tableau: Optional[list[list[float]]] = None
         self.__pivot = None
-        self.num_vars = -1
+        self.num_vars: int = -1
         self.objective_function: Optional[SimplexObjectiveFunction] = None
         self.constraints: Optional[list[SimplexConstraintFunction]] = None
         self.domains = None
+        self.number_of_slack_variables: int = 0
 
     def solve(self) -> SimplexSolution:
         self.__tableau = self.__create_tableau()
@@ -146,8 +147,6 @@ class Simplex:
     def __get_solution(self) -> SimplexSolutions:
         solution = {'z': self.__tableau[-1][-1]}
 
-        print(self.__tableau)
-
         for i, row in enumerate(self.__tableau[:-1]):
             for j, col in enumerate(self.__tableau[i]):
                 if self.__tableau[i][j] == 1:
@@ -155,7 +154,10 @@ class Simplex:
                         if i2 != i and self.__tableau[i2][j] != 0:
                             break
                     else:
-                        solution[f"x{j + 1}"] = row[-1]
+                        if (j + 1) >= (self.num_vars - self.number_of_slack_variables):
+                            solution[f"s{j - self.number_of_slack_variables}"] = row[-1]
+                        else:
+                            solution[f"x{j + 1}"] = row[-1]
 
         print(solution)
 
@@ -194,6 +196,8 @@ class Simplex:
                 artificial_to_add.append(indx)
             else:
                 artificial_to_add.append(indx)
+
+        self.number_of_slack_variables = len(slack_to_add)
 
         for sign, indx in slack_to_add:
             self.__add_slack_variable(sign, indx)
@@ -280,7 +284,6 @@ class Simplex:
         if number_of_artificial_variables == 0:
             return self.__tableau
 
-
         while not self.__is_solved():
             pivot = self.__find_first_phase_pivot()
             if pivot[1] < 0:
@@ -298,7 +301,6 @@ class Simplex:
         for row in self.__tableau:
             for i in range(number_of_artificial_variables):
                 row.pop(-2)
-
 
         return self.__tableau
 
@@ -468,8 +470,6 @@ if __name__ == "__main__":
                         .add_constraint(SimplexConstraintFunction(SimplexOperators.EQUAL, 1, 0, 2))
                         .set_to_standard_form()
                         .build())
-
-    print(simplex)
 
     answer = simplex.solve()
 
