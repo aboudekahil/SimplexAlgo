@@ -19,8 +19,8 @@ class Simplex:
 
     def solve(self) -> Solution:
         """
-TODO
-        :return:
+        Solves the simplex and returns the solution in the form of a simplex solution class.
+        :return: The simplex solution
         """
         self.__tableau = self.__create_tableau()
 
@@ -36,10 +36,10 @@ TODO
 
         return self.__get_solution()
 
-    def __is_solved(self):
+    def __is_solved(self) -> bool:
         """
-TODO
-        :return:
+        Checks whether the simplex is solved yet or no.
+        :return: boolean true if solved false otherwise.
         """
         is_solved = True
 
@@ -51,8 +51,8 @@ TODO
 
     def __find_pivot(self) -> tuple[int, int]:
         """
-TODO
-        :return:
+        Returns a tuple with the location of the pivot.
+        :return: a tuple with the location of the pivot.
         """
         entering_indx = self.__get_entering_var()
         leaving_indx = self.__get_leaving_var(entering_indx)
@@ -60,8 +60,8 @@ TODO
 
     def __fix_pivot(self, pivot_indx: tuple[int, int]):
         """
-TODO
-        :param pivot_indx:
+        Does row echilon operations to make the soon-to-be pivot an actual pivot.
+        :param pivot_indx: The location of the pivot
         """
         j, i = pivot_indx
 
@@ -75,8 +75,8 @@ TODO
 
     def __get_solution(self) -> Solutions:
         """
-TODO
-        :return:
+        Returns the solution of the simplex.
+        :return: the solution of the simplex.
         """
         # solution = {'z': self.__tableau[-1][-1]}
         #
@@ -98,8 +98,8 @@ TODO
 
     def __str__(self):
         """
-TODO
-        :return:
+        A string representation of the simplex.
+        :return: A string representation of the simplex.
         """
         str_rep = f"""
 {self.objective_function}
@@ -123,8 +123,8 @@ TODO
 
     def __create_tableau(self) -> list[list[float]]:
         """
-TODO
-        :return:
+        Creates the simplex tableau
+        :return: the simplex tableau
         """
         tableau = []
         slack_to_add: list[tuple[int, int]] = []
@@ -161,10 +161,10 @@ TODO
 
         return tableau
 
-    def __get_entering_var(self):
+    def __get_entering_var(self) -> int:
         """
-TODO
-        :return:
+        Returns indx of the variable to enter the basis
+        :return: indx of the variable to enter the basis
         """
         z_arr = self.__tableau[-1]
         smallest_indx = 0
@@ -179,9 +179,10 @@ TODO
 
     def __get_leaving_var(self, entering_indx) -> int:
         """
-TODO
-        :param entering_indx:
-        :return:
+        Returns indx of the variable to leave the basis
+        :return: indx of the variable to leave the basis
+        :param entering_indx: indx of variable entering the basis
+        :return: indx of the variable leaving the basis
         """
         skip = 0
         min_ratio_indx = -1
@@ -206,20 +207,20 @@ TODO
 
     def __add_slack_variable(self, sign: int, indx: int):
         """
-TODO
-        :param sign:
-        :param indx:
+        Adds slack variable to the problem.
+        :param sign: -1 if constraint is >= 1 if <=
+        :param indx: index of the slack variable in the constraints.
         """
         for i, constraint in enumerate(self.constraints):
-            constraint.values.insert(len(constraint.values) - 1, sign if i == indx else 0)
+            constraint.values.append(sign if i == indx else 0)
 
         self.objective_function.__values.insert(len(self.objective_function.__values) - 1, 0)
         self.num_vars += 1
 
     def __add_artificial_variable(self, indx: int):
         """
-TODO
-        :param indx:
+        Adds artificial variables to the simplex
+        :param indx: constraint index where we add the artificial variable.
         """
         for i, constraint in enumerate(self.constraints):
             constraint.values.insert(len(constraint.values) - 1, 1 if i == indx else 0)
@@ -229,8 +230,8 @@ TODO
 
     def __check_if_two_step(self) -> bool:
         """
-TODO
-        :return:
+        checks if the simplex requires two steps to solve.
+        :return: True if needs two steps false otherwise.
         """
         for constraint in self.constraints:
             if (constraint.operator == Operators.EQUAL
@@ -240,8 +241,8 @@ TODO
 
     def __solve_first_phase(self) -> list[list[float]]:
         """
-TODO
-        :return:
+        Solves the first phase in a two phase simplex.
+        :return: the resulting tableau after the first phase.
         """
         number_of_artificial_variables = 0
         for constraint in self.constraints:
@@ -271,20 +272,20 @@ TODO
 
         return self.__tableau
 
-    def __find_first_phase_pivot(self):
+    def __find_first_phase_pivot(self) -> tuple[int, int]:
         """
-TODO
-        :return:
+        Finds the pivot and returns its location in the first phase.
+        :return: the index of the pivot in the tableau.
         """
         entering_indx = self.__get_entering_var()
         leaving_indx = self.__get_leaving_var_first_phase(entering_indx)
         return entering_indx, leaving_indx
 
-    def __get_leaving_var_first_phase(self, entering_indx):
+    def __get_leaving_var_first_phase(self, entering_indx) -> int:
         """
-TODO
-        :param entering_indx:
-        :return:
+        Gets the leaving basis variable in the first phase.
+        :param entering_indx: the index of the variable entering the basis
+        :return: the index of the variable leaving the basis
         """
         skip = 0
         min_ratio_indx = -1

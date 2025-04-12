@@ -7,7 +7,7 @@ from simplex.simplex import Simplex
 class SimplexBuilder:
     def __init__(self):
         """
-TODO
+        Constructs the simplex builder to build the simplex.
         """
         self.__objective_function: Optional[ObjectiveFunction] = None
         self.__constraints: list[ConstraintFunction] = []
@@ -16,10 +16,10 @@ TODO
 
     def set_number_of_vars(self, num_var: int, *domains: VariableDomains) -> Self:
         """
-TODO
-        :param num_var:
-        :param domains:
-        :return:
+        Sets the number of variables in the problem and their domains.
+        :param num_var: the number of variables
+        :param domains: the domains of the variables respectively
+        :return: The builder itself
         """
         if self.__num_vars > 0:
             raise ValueError("The number of variables has already been set")
@@ -37,9 +37,9 @@ TODO
 
     def set_objective_function(self, objective_function: ObjectiveFunction) -> Self:
         """
-TODO
-        :param objective_function:
-        :return:
+        Sets the objective function for the problem
+        :param objective_function: The objective function
+        :return: The simplex builder
         """
         if self.__num_vars <= 0:
             raise ValueError("Please enter a valid value for the number of variables (>0)")
@@ -52,9 +52,9 @@ TODO
 
     def add_constraint(self, constraint: ConstraintFunction) -> Self:
         """
-TODO
-        :param constraint:
-        :return:
+        Adds a constraint to the problem.
+        :param constraint: the constraint to add.
+        :return: the simplex builder.
         """
         if self.__num_vars <= 0:
             raise ValueError("Please enter a valid value for the number of variables (>0)")
@@ -67,9 +67,9 @@ TODO
 
     def set_to_standard_form(self, verbose: bool = False) -> Self:
         """
-TODO
-        :param verbose:
-        :return:
+        Standardizes the problem.
+        :param verbose: Outputs the standardization process.
+        :return: The simplex builder
         """
         if verbose:
             # TODO Write error messages
@@ -105,8 +105,8 @@ TODO
 
     def build(self) -> Simplex:
         """
-TODO
-        :return:
+        Returns the simplex
+        :return: the simplex you built
         """
         if self.__num_vars <= 0:
             raise ValueError("No variables provided")
@@ -130,8 +130,8 @@ TODO
 
     def __fix_domain_less_than_zero(self, indx: int) -> None:
         """
-TODO
-        :param indx:
+        Fixes if the domain of a variable if it's less than 0
+        :param indx: the index of the variable to fix.
         """
         # TODO Check if correct
         assert indx <= len(self.__objective_function.__values)
@@ -144,8 +144,8 @@ TODO
 
     def __fix_domain_unrestricted(self, indx: int) -> None:
         """
-TODO
-        :param indx:
+        Fixes the variable if it is unrestricted.
+        :param indx: the index of the variable
         """
         # TODO Check if correct
         assert indx <= len(self.__objective_function.__values)
@@ -164,7 +164,7 @@ TODO
 
     def __fix_min_to_max(self):
         """
-TODO
+        Changes min to max in the objective function
         """
         values = self.__objective_function.__values
         values = map(lambda x: -x, values)
