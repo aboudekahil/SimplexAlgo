@@ -1,20 +1,27 @@
 from typing import Optional
 
-from simplex import SimplexObjectiveFunction, SimplexConstraintFunction, SimplexSolution, SimplexNotFeasible, \
-    SimplexSolutions, SimplexVariableDomains, SimplexOperators
+from simplex import ObjectiveFunction, ConstraintFunction, Solution, NotFeasible, \
+    Solutions, VariableDomains, Operators
 
 
 class Simplex:
     def __init__(self):
+        """
+        Simplex Constructor
+        """
         self.__tableau: Optional[list[list[float]]] = None
         self.__pivot = None
         self.num_vars: int = -1
-        self.objective_function: Optional[SimplexObjectiveFunction] = None
-        self.constraints: Optional[list[SimplexConstraintFunction]] = None
+        self.objective_function: Optional[ObjectiveFunction] = None
+        self.constraints: Optional[list[ConstraintFunction]] = None
         self.domains = None
         self.number_of_slack_variables: int = 0
 
-    def solve(self) -> SimplexSolution:
+    def solve(self) -> Solution:
+        """
+TODO
+        :return:
+        """
         self.__tableau = self.__create_tableau()
 
         if self.__check_if_two_step():
@@ -23,13 +30,17 @@ class Simplex:
         while not self.__is_solved():
             pivot = self.__find_pivot()
             if pivot[1] < 0:
-                return SimplexNotFeasible()
+                return NotFeasible()
 
             self.__fix_pivot(pivot)
 
         return self.__get_solution()
 
     def __is_solved(self):
+        """
+TODO
+        :return:
+        """
         is_solved = True
 
         for i, x in enumerate(self.__tableau[-1]):
@@ -39,11 +50,19 @@ class Simplex:
         return is_solved
 
     def __find_pivot(self) -> tuple[int, int]:
+        """
+TODO
+        :return:
+        """
         entering_indx = self.__get_entering_var()
         leaving_indx = self.__get_leaving_var(entering_indx)
         return entering_indx, leaving_indx
 
     def __fix_pivot(self, pivot_indx: tuple[int, int]):
+        """
+TODO
+        :param pivot_indx:
+        """
         j, i = pivot_indx
 
         pivot = self.__tableau[i][j]
@@ -54,26 +73,34 @@ class Simplex:
                 row_scale = [y * self.__tableau[indx][j] for y in self.__tableau[i]]
                 self.__tableau[indx] = [x - y for x, y in zip(self.__tableau[indx], row_scale)]
 
-    def __get_solution(self) -> SimplexSolutions:
-        solution = {'z': self.__tableau[-1][-1]}
+    def __get_solution(self) -> Solutions:
+        """
+TODO
+        :return:
+        """
+        # solution = {'z': self.__tableau[-1][-1]}
+        #
+        # for i, row in enumerate(self.__tableau[:-1]):
+        #     for j, col in enumerate(self.__tableau[i]):
+        #         if self.__tableau[i][j] == 1:
+        #             for i2, _ in enumerate(self.__tableau):
+        #                 if i2 != i and self.__tableau[i2][j] != 0:
+        #                     break
+        #             else:
+        #                 if (j + 1) >= (self.num_vars - self.number_of_slack_variables):
+        #                     solution[f"s{j - self.number_of_slack_variables}"] = row[-1]
+        #                 else:
+        #                     solution[f"x{j + 1}"] = row[-1]
+        #
+        # print(solution)
 
-        for i, row in enumerate(self.__tableau[:-1]):
-            for j, col in enumerate(self.__tableau[i]):
-                if self.__tableau[i][j] == 1:
-                    for i2, _ in enumerate(self.__tableau):
-                        if i2 != i and self.__tableau[i2][j] != 0:
-                            break
-                    else:
-                        if (j + 1) >= (self.num_vars - self.number_of_slack_variables):
-                            solution[f"s{j - self.number_of_slack_variables}"] = row[-1]
-                        else:
-                            solution[f"x{j + 1}"] = row[-1]
-
-        print(solution)
-
-        return SimplexSolutions(self.__tableau[-1][-1])
+        return Solutions(self.__tableau[-1][-1])
 
     def __str__(self):
+        """
+TODO
+        :return:
+        """
         str_rep = f"""
 {self.objective_function}
 /
@@ -85,23 +112,27 @@ class Simplex:
 
         for indx, domain in enumerate(self.domains):
             match domain:
-                case SimplexVariableDomains.GREATER_THAN_ZERO:
+                case VariableDomains.GREATER_THAN_ZERO:
                     str_rep += f"x{indx + 1} >= 0\n"
-                case SimplexVariableDomains.LESS_THAN_ZERO:
+                case VariableDomains.LESS_THAN_ZERO:
                     str_rep += f"x{indx + 1} <= 0\n"
-                case SimplexVariableDomains.UNRESTRICTED:
+                case VariableDomains.UNRESTRICTED:
                     str_rep += f"x{indx + 1} in R\n"
 
         return str_rep
 
     def __create_tableau(self) -> list[list[float]]:
+        """
+TODO
+        :return:
+        """
         tableau = []
         slack_to_add: list[tuple[int, int]] = []
         artificial_to_add: list[int] = []
         for indx, constraint in enumerate(self.constraints):
-            if constraint.operator == SimplexOperators.LESS_THAN_OR_EQUAL:
+            if constraint.operator == Operators.LESS_THAN_OR_EQUAL:
                 slack_to_add.append((1, indx))
-            elif constraint.operator == SimplexOperators.GREATER_THAN_OR_EQUAL:
+            elif constraint.operator == Operators.GREATER_THAN_OR_EQUAL:
                 slack_to_add.append((-1, indx))
                 artificial_to_add.append(indx)
             else:
@@ -118,7 +149,7 @@ class Simplex:
         for constraint in self.constraints:
             tableau.append(constraint.values)
 
-        z_arr = list(map(lambda x: -x, self.objective_function.values[:-1])) + [self.objective_function.values[-1]]
+        z_arr = list(map(lambda x: -x, self.objective_function.__values[:-1])) + [self.objective_function.__values[-1]]
         tableau.append(z_arr)
 
         if len(artificial_to_add) > 0:
@@ -131,6 +162,10 @@ class Simplex:
         return tableau
 
     def __get_entering_var(self):
+        """
+TODO
+        :return:
+        """
         z_arr = self.__tableau[-1]
         smallest_indx = 0
         smallest = z_arr[smallest_indx]
@@ -143,6 +178,11 @@ class Simplex:
         return smallest_indx
 
     def __get_leaving_var(self, entering_indx) -> int:
+        """
+TODO
+        :param entering_indx:
+        :return:
+        """
         skip = 0
         min_ratio_indx = -1
         min_ratio = 0
@@ -165,30 +205,47 @@ class Simplex:
         return min_ratio_indx
 
     def __add_slack_variable(self, sign: int, indx: int):
+        """
+TODO
+        :param sign:
+        :param indx:
+        """
         for i, constraint in enumerate(self.constraints):
             constraint.values.insert(len(constraint.values) - 1, sign if i == indx else 0)
 
-        self.objective_function.values.insert(len(self.objective_function.values) - 1, 0)
+        self.objective_function.__values.insert(len(self.objective_function.__values) - 1, 0)
         self.num_vars += 1
 
     def __add_artificial_variable(self, indx: int):
+        """
+TODO
+        :param indx:
+        """
         for i, constraint in enumerate(self.constraints):
             constraint.values.insert(len(constraint.values) - 1, 1 if i == indx else 0)
 
-        self.objective_function.values.insert(len(self.objective_function.values) - 1, 0)
+        self.objective_function.__values.insert(len(self.objective_function.__values) - 1, 0)
         self.num_vars += 1
 
     def __check_if_two_step(self) -> bool:
+        """
+TODO
+        :return:
+        """
         for constraint in self.constraints:
-            if (constraint.operator == SimplexOperators.EQUAL
-                    or constraint.operator == SimplexOperators.GREATER_THAN_OR_EQUAL):
+            if (constraint.operator == Operators.EQUAL
+                    or constraint.operator == Operators.GREATER_THAN_OR_EQUAL):
                 return True
         return False
 
     def __solve_first_phase(self) -> list[list[float]]:
+        """
+TODO
+        :return:
+        """
         number_of_artificial_variables = 0
         for constraint in self.constraints:
-            if constraint.operator == SimplexOperators.EQUAL or constraint.operator == SimplexOperators.GREATER_THAN_OR_EQUAL:
+            if constraint.operator == Operators.EQUAL or constraint.operator == Operators.GREATER_THAN_OR_EQUAL:
                 number_of_artificial_variables += 1
 
         if number_of_artificial_variables == 0:
@@ -215,11 +272,20 @@ class Simplex:
         return self.__tableau
 
     def __find_first_phase_pivot(self):
+        """
+TODO
+        :return:
+        """
         entering_indx = self.__get_entering_var()
         leaving_indx = self.__get_leaving_var_first_phase(entering_indx)
         return entering_indx, leaving_indx
 
     def __get_leaving_var_first_phase(self, entering_indx):
+        """
+TODO
+        :param entering_indx:
+        :return:
+        """
         skip = 0
         min_ratio_indx = -1
         min_ratio = 0

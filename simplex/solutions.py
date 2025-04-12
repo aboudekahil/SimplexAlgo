@@ -1,4 +1,10 @@
-class SimplexNotFeasible:
+# TODO fix solution schema, probably make it one class that has an enum that indicates the type of solution and
+# TODO attributes that give value
+
+class NotFeasible:
+    """
+    Indicates that the simplex solution is not feasible
+    """
     def __init__(self):
         self.msg = "Linear problem is not feasible"
 
@@ -7,9 +13,13 @@ class SimplexNotFeasible:
 
 
 # TODO fix naming
-class SimplexSolutions:
+class Solutions:
     def __init__(self, *values: float):
+        """
+        Solution constructor
+        :param values: the z value
+        """
         self.values = list(values)
 
 
-SimplexSolution = SimplexNotFeasible | SimplexSolutions
+Solution = NotFeasible | Solutions

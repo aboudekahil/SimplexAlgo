@@ -1,4 +1,4 @@
-from simplex.enums import SimplexVariableDomains, SimplexOperators, SimplexMaxOrMin
+from simplex.enums import VariableDomains, Operators, MaxOrMin
 from simplex.solutions import *
 from simplex.functions import *
 from simplex.simplex_builder import *

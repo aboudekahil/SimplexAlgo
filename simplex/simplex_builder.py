@@ -1,17 +1,26 @@
 from typing import Optional, Self
 
-from simplex import SimplexObjectiveFunction, SimplexConstraintFunction, SimplexVariableDomains, SimplexMaxOrMin
+from simplex import ObjectiveFunction, ConstraintFunction, VariableDomains, MaxOrMin
 from simplex.simplex import Simplex
 
 
 class SimplexBuilder:
     def __init__(self):
-        self.__objective_function: Optional[SimplexObjectiveFunction] = None
-        self.__constraints: list[SimplexConstraintFunction] = []
+        """
+TODO
+        """
+        self.__objective_function: Optional[ObjectiveFunction] = None
+        self.__constraints: list[ConstraintFunction] = []
         self.__num_vars: int = -1
-        self.__domains: list[SimplexVariableDomains] = []
+        self.__domains: list[VariableDomains] = []
 
-    def set_number_of_vars(self, num_var: int, *domains: SimplexVariableDomains) -> Self:
+    def set_number_of_vars(self, num_var: int, *domains: VariableDomains) -> Self:
+        """
+TODO
+        :param num_var:
+        :param domains:
+        :return:
+        """
         if self.__num_vars > 0:
             raise ValueError("The number of variables has already been set")
 
@@ -26,7 +35,12 @@ class SimplexBuilder:
 
         return self
 
-    def set_objective_function(self, objective_function: SimplexObjectiveFunction) -> Self:
+    def set_objective_function(self, objective_function: ObjectiveFunction) -> Self:
+        """
+TODO
+        :param objective_function:
+        :return:
+        """
         if self.__num_vars <= 0:
             raise ValueError("Please enter a valid value for the number of variables (>0)")
 
@@ -36,7 +50,12 @@ class SimplexBuilder:
         self.__objective_function = objective_function
         return self
 
-    def add_constraint(self, constraint: SimplexConstraintFunction) -> Self:
+    def add_constraint(self, constraint: ConstraintFunction) -> Self:
+        """
+TODO
+        :param constraint:
+        :return:
+        """
         if self.__num_vars <= 0:
             raise ValueError("Please enter a valid value for the number of variables (>0)")
 
@@ -47,6 +66,11 @@ class SimplexBuilder:
         return self
 
     def set_to_standard_form(self, verbose: bool = False) -> Self:
+        """
+TODO
+        :param verbose:
+        :return:
+        """
         if verbose:
             # TODO Write error messages
             raise NotImplementedError()
@@ -55,31 +79,35 @@ class SimplexBuilder:
             # TODO Write error message
             raise ValueError()
 
-        new_domains: list[SimplexVariableDomains] = []
+        new_domains: list[VariableDomains] = []
         for indx, domain in enumerate(self.__domains):
             match domain:
-                case SimplexVariableDomains.GREATER_THAN_ZERO:
+                case VariableDomains.GREATER_THAN_ZERO:
                     new_domains.append(domain)
                     continue
-                case SimplexVariableDomains.LESS_THAN_ZERO:
+                case VariableDomains.LESS_THAN_ZERO:
                     self.__fix_domain_less_than_zero(indx)
-                    new_domains.append(SimplexVariableDomains(SimplexVariableDomains.GREATER_THAN_ZERO))
+                    new_domains.append(VariableDomains(VariableDomains.GREATER_THAN_ZERO))
                     continue
-                case SimplexVariableDomains.UNRESTRICTED:
+                case VariableDomains.UNRESTRICTED:
                     self.__fix_domain_unrestricted(indx)
-                    new_domains.append(SimplexVariableDomains(SimplexVariableDomains.GREATER_THAN_ZERO))
-                    new_domains.append(SimplexVariableDomains(SimplexVariableDomains.GREATER_THAN_ZERO))
+                    new_domains.append(VariableDomains(VariableDomains.GREATER_THAN_ZERO))
+                    new_domains.append(VariableDomains(VariableDomains.GREATER_THAN_ZERO))
                     continue
 
         self.__domains = new_domains
         self.__num_vars = len(new_domains)
 
-        if self.__objective_function.operator == SimplexMaxOrMin.MIN:
+        if self.__objective_function.__operator == MaxOrMin.MIN:
             self.__fix_min_to_max()
 
         return self
 
     def build(self) -> Simplex:
+        """
+TODO
+        :return:
+        """
         if self.__num_vars <= 0:
             raise ValueError("No variables provided")
 
@@ -101,20 +129,28 @@ class SimplexBuilder:
         return simplex
 
     def __fix_domain_less_than_zero(self, indx: int) -> None:
+        """
+TODO
+        :param indx:
+        """
         # TODO Check if correct
-        assert indx <= len(self.__objective_function.values)
+        assert indx <= len(self.__objective_function.__values)
 
-        self.__objective_function.values[indx] *= -1
+        self.__objective_function.__values[indx] *= -1
 
         for constraint in self.__constraints:
             assert indx <= len(constraint.values)
             constraint.values[indx] *= -1
 
     def __fix_domain_unrestricted(self, indx: int) -> None:
+        """
+TODO
+        :param indx:
+        """
         # TODO Check if correct
-        assert indx <= len(self.__objective_function.values)
+        assert indx <= len(self.__objective_function.__values)
 
-        values = self.__objective_function.values
+        values = self.__objective_function.__values
         values.insert(indx, -values[indx])
 
         new_constraints = []
@@ -122,11 +158,14 @@ class SimplexBuilder:
             assert indx <= len(constraint.values)
             constraint_values = constraint.values
             constraint_values.insert(indx, -constraint_values[indx])
-            new_constraints.append(SimplexConstraintFunction(constraint.operator, *constraint_values))
+            new_constraints.append(ConstraintFunction(constraint.operator, *constraint_values))
 
         self.__constraints = new_constraints
 
     def __fix_min_to_max(self):
-        values = self.__objective_function.values
+        """
+TODO
+        """
+        values = self.__objective_function.__values
         values = map(lambda x: -x, values)
-        self.__objective_function = SimplexObjectiveFunction(SimplexMaxOrMin(SimplexMaxOrMin.MAX), *values)
+        self.__objective_function = ObjectiveFunction(MaxOrMin(MaxOrMin.MAX), *values)
