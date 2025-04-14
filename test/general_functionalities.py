@@ -23,7 +23,7 @@ class MyTestCase(unittest.TestCase):
 
         answer = simplex.solve()
 
-        self.assertEqual(answer.__values, [13])
+        self.assertEqual(answer.values, [13])
 
 
 if __name__ == '__main__':

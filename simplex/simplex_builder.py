@@ -1,7 +1,7 @@
-from typing import Optional, Self
+from typing import Optional, Self, Union
 
 from simplex import ObjectiveFunction, ConstraintFunction, VariableDomains, MaxOrMin
-from simplex.simplex import Simplex
+from simplex.simplex_class import Simplex
 
 
 class SimplexBuilder:
@@ -13,6 +13,14 @@ class SimplexBuilder:
         self.__constraints: list[ConstraintFunction] = []
         self.__num_vars: int = -1
         self.__domains: list[VariableDomains] = []
+
+    def set_problem_from_text(self, problem: str) -> Self:
+        """
+        Automatically sets the variable for the simplex from text input
+        :param problem: the problem written in text form
+        :return: the simplex builder reformatted
+        """
+        return Self
 
     def set_number_of_vars(self, num_var: int, *domains: VariableDomains) -> Self:
         """
@@ -82,10 +90,10 @@ class SimplexBuilder:
         new_domains: list[VariableDomains] = []
         for indx, domain in enumerate(self.__domains):
             match domain:
-                case VariableDomains.GREATER_THAN_ZERO:
+                case VariableDomains.GEQ_THAN_ZERO:
                     new_domains.append(domain)
                     continue
-                case VariableDomains.LESS_THAN_ZERO:
+                case VariableDomains.LEQ_THAN_ZERO:
                     self.__fix_domain_less_than_zero(indx)
                     new_domains.append(VariableDomains(VariableDomains.GREATER_THAN_ZERO))
                     continue
@@ -98,7 +106,7 @@ class SimplexBuilder:
         self.__domains = new_domains
         self.__num_vars = len(new_domains)
 
-        if self.__objective_function.__operator == MaxOrMin.MIN:
+        if self.__objective_function == MaxOrMin.MIN:
             self.__fix_min_to_max()
 
         return self
@@ -134,9 +142,9 @@ class SimplexBuilder:
         :param indx: the index of the variable to fix.
         """
         # TODO Check if correct
-        assert indx <= len(self.__objective_function.__values)
+        assert indx <= len(self.__objective_function.values)
 
-        self.__objective_function.__values[indx] *= -1
+        self.__objective_function.values[indx] *= -1
 
         for constraint in self.__constraints:
             assert indx <= len(constraint.values)
@@ -148,9 +156,9 @@ class SimplexBuilder:
         :param indx: the index of the variable
         """
         # TODO Check if correct
-        assert indx <= len(self.__objective_function.__values)
+        assert indx <= len(self.__objective_function.values)
 
-        values = self.__objective_function.__values
+        values = self.__objective_function.values
         values.insert(indx, -values[indx])
 
         new_constraints = []
@@ -166,6 +174,17 @@ class SimplexBuilder:
         """
         Changes min to max in the objective function
         """
-        values = self.__objective_function.__values
+        values = self.__objective_function.values
         values = map(lambda x: -x, values)
         self.__objective_function = ObjectiveFunction(MaxOrMin(MaxOrMin.MAX), *values)
+
+    def __parse_text(self, text: str):
+        """
+        Parses text and constructs the object
+        :param text: text to parse
+        """
+        lines = text.splitlines()
+        var_line = lines[0]
+
+
+

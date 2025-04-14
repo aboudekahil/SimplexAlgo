@@ -1,4 +1,5 @@
 from enum import Enum, auto, unique
+from typing import Self
 
 
 @unique
@@ -33,12 +34,12 @@ class Operators(Enum):
     Corresponds to an equation where Ax = b.
     """
 
-    LESS_THAN_OR_EQUAL = auto()
+    LEQ = auto()
     """
     Corresponds to an inequality where Ax <= b.
     """
 
-    GREATER_THAN_OR_EQUAL = auto()
+    GEQ = auto()
     """
     Corresponds to an inequality where Ax >= b.
     """
@@ -47,7 +48,7 @@ class Operators(Enum):
 @unique
 class MaxOrMin(Enum):
     """
-    Max or Min operators on the objective function z.'
+    Max or Min operators on the objective function z.
     """
 
     MAX = auto()
@@ -59,3 +60,14 @@ class MaxOrMin(Enum):
     """
     Corresponds to when you're trying to min an equation.
     """
+
+    @classmethod
+    def from_text(cls, text: str) -> Self:
+        text = text.strip()
+        match text.lower():
+            case "min":
+                return MaxOrMin.MIN
+            case "max":
+                return MaxOrMin.MAX
+            case _:
+                raise ValueError("Inputted parameter is neither max nor min")

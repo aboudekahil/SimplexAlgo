@@ -130,9 +130,9 @@ class Simplex:
         slack_to_add: list[tuple[int, int]] = []
         artificial_to_add: list[int] = []
         for indx, constraint in enumerate(self.constraints):
-            if constraint.operator == Operators.LESS_THAN_OR_EQUAL:
+            if constraint.operator == Operators.LEQ:
                 slack_to_add.append((1, indx))
-            elif constraint.operator == Operators.GREATER_THAN_OR_EQUAL:
+            elif constraint.operator == Operators.GEQ:
                 slack_to_add.append((-1, indx))
                 artificial_to_add.append(indx)
             else:
@@ -149,7 +149,7 @@ class Simplex:
         for constraint in self.constraints:
             tableau.append(constraint.values)
 
-        z_arr = list(map(lambda x: -x, self.objective_function.__values[:-1])) + [self.objective_function.__values[-1]]
+        z_arr = list(map(lambda x: -x, self.objective_function.values[:-1])) + [self.objective_function.values[-1]]
         tableau.append(z_arr)
 
         if len(artificial_to_add) > 0:
@@ -214,7 +214,7 @@ class Simplex:
         for i, constraint in enumerate(self.constraints):
             constraint.values.append(sign if i == indx else 0)
 
-        self.objective_function.__values.insert(len(self.objective_function.__values) - 1, 0)
+        self.objective_function.values.insert(len(self.objective_function.values) - 1, 0)
         self.num_vars += 1
 
     def __add_artificial_variable(self, indx: int):
@@ -225,7 +225,7 @@ class Simplex:
         for i, constraint in enumerate(self.constraints):
             constraint.values.insert(len(constraint.values) - 1, 1 if i == indx else 0)
 
-        self.objective_function.__values.insert(len(self.objective_function.__values) - 1, 0)
+        self.objective_function.values.insert(len(self.objective_function.values) - 1, 0)
         self.num_vars += 1
 
     def __check_if_two_step(self) -> bool:
@@ -235,7 +235,7 @@ class Simplex:
         """
         for constraint in self.constraints:
             if (constraint.operator == Operators.EQUAL
-                    or constraint.operator == Operators.GREATER_THAN_OR_EQUAL):
+                    or constraint.operator == Operators.GEQ):
                 return True
         return False
 
@@ -246,7 +246,7 @@ class Simplex:
         """
         number_of_artificial_variables = 0
         for constraint in self.constraints:
-            if constraint.operator == Operators.EQUAL or constraint.operator == Operators.GREATER_THAN_OR_EQUAL:
+            if constraint.operator == Operators.EQUAL or constraint.operator == Operators.GEQ:
                 number_of_artificial_variables += 1
 
         if number_of_artificial_variables == 0:

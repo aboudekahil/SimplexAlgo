@@ -12,27 +12,27 @@ class ObjectiveFunction:
         :param min_or_max: Whether we want to minimize or maximize a function.
         :param args: The coefficients of the objective function with the last one being the right hand side.
         """
-        self.__operator = min_or_max
-        self.__values = list(args)
+        self.operator = min_or_max
+        self.values = list(args)
 
     @property
     def num_vars(self):
         """
         :return: The number of variables used in the objective function.
         """
-        return len(self.__values) - 1
+        return len(self.values) - 1
 
     def __str__(self):
         """
         :return: String representation of the objective function.
         """
         # TODO fix formatting
-        str_rep = f"{'min' if self.__operator == MaxOrMin.MIN else 'max'} z = "
+        str_rep = f"{'min' if self.operator == MaxOrMin.MIN else 'max'} z = "
 
-        for indx, value in enumerate(self.__values[:-1]):
+        for indx, value in enumerate(self.values[:-1]):
             str_rep += f"({value}x{indx + 1}) + "
 
-        str_rep += f"{self.__values[-1]}"
+        str_rep += f"{self.values[-1]}"
 
         return str_rep
 
