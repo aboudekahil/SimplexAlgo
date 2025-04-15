@@ -14,14 +14,6 @@ class SimplexBuilder:
         self.__num_vars: int = -1
         self.__domains: list[VariableDomains] = []
 
-    def set_problem_from_text(self, problem: str) -> Self:
-        """
-        Automatically sets the variable for the simplex from text input
-        :param problem: the problem written in text form
-        :return: the simplex builder reformatted
-        """
-        return Self
-
     def set_number_of_vars(self, num_var: int, *domains: VariableDomains) -> Self:
         """
         Sets the number of variables in the problem and their domains.
@@ -95,12 +87,12 @@ class SimplexBuilder:
                     continue
                 case VariableDomains.LEQ_THAN_ZERO:
                     self.__fix_domain_less_than_zero(indx)
-                    new_domains.append(VariableDomains(VariableDomains.GREATER_THAN_ZERO))
+                    new_domains.append(VariableDomains(VariableDomains.GEQ_THAN_ZERO))
                     continue
                 case VariableDomains.UNRESTRICTED:
                     self.__fix_domain_unrestricted(indx)
-                    new_domains.append(VariableDomains(VariableDomains.GREATER_THAN_ZERO))
-                    new_domains.append(VariableDomains(VariableDomains.GREATER_THAN_ZERO))
+                    new_domains.append(VariableDomains(VariableDomains.GEQ_THAN_ZERO))
+                    new_domains.append(VariableDomains(VariableDomains.GEQ_THAN_ZERO))
                     continue
 
         self.__domains = new_domains
@@ -110,6 +102,16 @@ class SimplexBuilder:
             self.__fix_min_to_max()
 
         return self
+
+    @staticmethod
+    def parse_text(text: str) -> Simplex:
+        """
+        Parses text and constructs the object
+        :param text: text to parse
+        """
+        from simplex.LPParser import LPParser, LPScanner
+
+        return LPParser(LPScanner(text).scan_tokens()).parse()
 
     def build(self) -> Simplex:
         """
@@ -178,13 +180,10 @@ class SimplexBuilder:
         values = map(lambda x: -x, values)
         self.__objective_function = ObjectiveFunction(MaxOrMin(MaxOrMin.MAX), *values)
 
-    def __parse_text(self, text: str):
-        """
-        Parses text and constructs the object
-        :param text: text to parse
-        """
-        lines = text.splitlines()
-        var_line = lines[0]
 
 
+
+    def __add_var(self, domain: VariableDomains):
+        self.__num_vars += 1
+        self.__domains.append(domain)
 

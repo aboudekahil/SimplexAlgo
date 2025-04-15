@@ -29,10 +29,13 @@ class ObjectiveFunction:
         # TODO fix formatting
         str_rep = f"{'min' if self.operator == MaxOrMin.MIN else 'max'} z = "
 
-        for indx, value in enumerate(self.values[:-1]):
-            str_rep += f"({value}x{indx + 1}) + "
+        for indx, value in enumerate(self.values[:-2]):
+            str_rep += f"({value})x{indx} + "
 
-        str_rep += f"{self.values[-1]}"
+        if self.values[-1] != 0:
+            str_rep += f"({self.values[-2]})x{len(self.values) - 2} + ({self.values[-1]})"
+        else:
+            str_rep += f"({self.values[-2]})x{len(self.values) - 2}"
 
         return str_rep
 
@@ -62,17 +65,19 @@ class ConstraintFunction:
         """
         :return: String representation of the constraint function.
         """
-        str_rep = "".join(
-            map(lambda x: f"({x[1]}x{x[0] + 1}) + ", enumerate(self.values[:-2])))
+        str_rep = ""
 
-        str_rep += f"({len(self.values) - 2}x{self.values[-2]})"
+        for indx, val in enumerate(self.values[:-2]):
+            str_rep += f"({val})x{indx} + "
+
+        str_rep += f"({self.values[-2]})x{len(self.values) - 2}"
 
         match self.operator:
             case Operators.EQUAL:
                 str_rep += f"  = {self.values[-1]}"
-            case Operators.LESS_THAN_OR_EQUAL:
+            case Operators.LEQ:
                 str_rep += f" <= {self.values[-1]}"
-            case Operators.GREATER_THAN_OR_EQUAL:
+            case Operators.GEQ:
                 str_rep += f" >= {self.values[-1]}"
 
         return str_rep

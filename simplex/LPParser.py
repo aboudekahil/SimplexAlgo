@@ -1,6 +1,11 @@
 from enum import Enum, auto
+from typing import Optional
 
-from simplex import MaxOrMin, ObjectiveFunction
+from simplex import Simplex, MaxOrMin, SimplexBuilder, VariableDomains, ObjectiveFunction, ConstraintFunction, Operators
+
+
+class LPParsingError(Exception):
+    pass
 
 
 class TokenType(Enum):
@@ -16,6 +21,7 @@ class TokenType(Enum):
     NUMBER = auto()
     NEW_LINE = auto()
     EOF = auto()
+    UNRESTRICTED = auto()
 
     def is_num(self):
         return self == self.NUMBER or self == self.DECIMAL
@@ -37,6 +43,55 @@ class Token:
 
     def __repr__(self):
         return f"{self.token_type}: {self.lexem.__repr__()}"
+
+
+class Variable:
+    def __init__(self, indx: int, domain: Optional[VariableDomains]):
+        self.indx = indx
+        self.domain = domain
+
+
+class Term:
+    def __init__(self, coefficient: float, variable: Optional[Variable] = None):
+        self.coefficient = coefficient
+        self.variable = variable
+
+
+class Formula:
+    def __init__(self):
+        self.terms: list[Term] = []
+
+    def add_term(self, term: Term):
+        self.terms.append(term)
+
+
+class Constraint:
+    def __init__(self, left: Formula, operator: TokenType, right: Formula):
+        self.left: Formula = left
+        self.operator: Operators = Operators.EQUAL
+
+        if operator == TokenType.LEQ:
+            self.operator = Operators.LEQ
+        else:
+            self.operator = Operators.GEQ
+
+        self.right = right
+
+
+class LinearProgram:
+    def __init__(self):
+        self.variables: dict[int, Variable] = {}
+        self.objective_function: Optional[tuple[MaxOrMin, Formula]] = None
+        self.constraints: list[Constraint] = []
+
+    def add_variable(self, var: Variable):
+        self.variables[var.indx] = var
+
+    def set_objective(self, max_or_min: MaxOrMin, formula: Formula):
+        self.objective_function = (max_or_min, formula)
+
+    def add_constraint(self, constraint: Constraint):
+        self.constraints.append(constraint)
 
 
 class LPScanner:
@@ -138,228 +193,237 @@ class LPScanner:
             token_type = TokenType.MIN
         elif text.lower() == 'max':
             token_type = TokenType.MAX
+        elif text.lower() == "unrestricted":
+            token_type = TokenType.UNRESTRICTED
         else:
             token_type = TokenType.IDENTIFIER
 
         self.__add_token(token_type)
 
-
 class LPParser:
     def __init__(self, tokens: list[Token]):
         self.__tokens = tokens
-        self.current = 0
-        self.num_var = -1
-        self.constraints = []
-        self.domains = None
+        self.__current = 0
+        self.__lp = LinearProgram()
 
-    def parse(self):
-        self.__num_var()
-        self.__consume_new_lines()
+
+    def parse(self) -> Simplex:
+        self.__simplex()
+        simplex_builder = SimplexBuilder()
+        simplex_builder.set_number_of_vars(len(self.__lp.variables),
+                                           *[var.domain for var in self.__lp.variables.values()])
+        simplex_builder.set_objective_function(ObjectiveFunction(self.__lp.objective_function[0], *self.__term_to_list(
+            self.__lp.objective_function[1].terms, len(self.__lp.variables))))
+
+        for constraint in self.__lp.constraints:
+            simplex_builder.add_constraint(ConstraintFunction(constraint.operator, *self.__constraint_to_list(constraint,
+                                                                                                              len(self.__lp.variables))))
+
+        simplex_builder.set_to_standard_form()
+        return simplex_builder.build()
+
+    def __term_to_list(self, term: list[Term], num_var: int) -> list[float]:
+        coefs: list[int] = [0] * (num_var + 1)
+
+        for iterm in term:
+            if iterm.variable is not None:
+                coefs[iterm.variable.indx] = iterm.coefficient
+            else:
+                coefs[-1] = iterm.coefficient
+
+        return coefs
+
+    def __constraint_to_list(self, constraint: Constraint, num_var: int) -> list[float]:
+        coefs = [0] * (num_var + 1)
+        left_coef = self.__term_to_list(constraint.left.terms, num_var)
+
+        for indx, n in enumerate(left_coef):
+            coefs[indx] = n * (1 if indx < num_var else -1)
+
+        right_coef = self.__term_to_list(constraint.right.terms, num_var)
+        for indx, n in enumerate(right_coef):
+            coefs[indx] += n * (-1 if indx < num_var else 1)
+
+        return coefs
+
+    def __simplex(self):
+        while self.__check(TokenType.NEW_LINE) and not self.__is_at_end():
+            self.__advance()
+
+        while self.__check_identifier() and self.__peek().lexem.startswith("x"):
+            self.__domain()
+
+            while self.__check(TokenType.NEW_LINE) and not self.__is_at_end():
+                self.__advance()
+
         self.__objective_function()
-        self.__consume_new_lines()
-        self.__constraints()
 
-    def __objective_function(self):
-        if self.__peek().token_type == TokenType.MAX:
-            max_or_min = MaxOrMin.MAX
-        elif self.__peek().token_type == TokenType.MIN:
-            max_or_min = MaxOrMin.MIN
+        while self.__check(TokenType.NEW_LINE) and not self.__is_at_end():
+            self.__advance()
+
+        while not self.__is_at_end() and not self.__check(TokenType.EOF):
+            self.__constraint()
+
+            while self.__check(TokenType.NEW_LINE) and not self.__is_at_end():
+                self.__advance()
+
+    def __domain(self):
+        var = self.__variable()
+
+        if self.__check(TokenType.UNRESTRICTED):
+            var.domain = VariableDomains.UNRESTRICTED
+        elif self.__check(TokenType.LEQ):
+            var.domain = VariableDomains.LEQ_THAN_ZERO
+        elif self.__check(TokenType.GEQ):
+            var.domain = VariableDomains.GEQ_THAN_ZERO
         else:
-            raise ValueError("Objective function doesn't have a max/min operator")
+            raise LPParsingError(
+                f"Unrecognized domain for x{var.indx}, only available options are UNRESTRICTED, LEQ, GEQ")
 
-        coefficients = self.__formula()
-
-        self.objective_function = ObjectiveFunction(max_or_min, *coefficients)
-        self.__consume(TokenType.NEW_LINE, "Expected a new line after the number of variables")
-
-
-    def __num_var(self):
-
-        self.num_var = int(self.__consume(TokenType.NUMBER, "Number of variables not set in the beginning.").lexem)
-
-        if self.num_var <= 0:
-            raise ValueError("Invalid number of variables set, should be >0")
-
-        self.__consume(TokenType.NEW_LINE, "Expected a new line after the number of variables")
-
-    def __is_at_end(self) -> bool:
-        return self.__peek().token_type == TokenType.EOF
-
-    def __peek(self) -> Token:
-        return self.__tokens[self.current]
-
-    def __peek_next(self) -> Token:
-        if self.__is_at_end():
-            return self.__tokens[-1]
-        return self.__tokens[self.current + 1]
-
-    def __consume(self, token_type: TokenType, error_message: str) -> Token:
-        if self.__check(token_type):
-            return self.__advance()
-
-        raise ValueError(error_message)
-
-    def __advance(self) -> Token:
-        if not self.__is_at_end():
-            self.current += 1
-        else:
-            return self.__tokens[-1]
-
-        return self.__tokens[self.current - 1]
+        self.__advance()
+        self.__advance()
+        self.__lp.add_variable(var)
 
     def __check(self, token_type: TokenType) -> bool:
         if self.__is_at_end():
             return False
+
         return self.__peek().token_type == token_type
 
-    def __consume_new_lines(self):
-        while self.__check(TokenType.NEW_LINE):
+    def __peek(self) -> Token:
+        return self.__tokens[self.__current]
+
+    def __is_at_end(self) -> bool:
+        return self.__peek().token_type == TokenType.EOF
+
+    def __advance(self) -> Token:
+        if not self.__is_at_end():
+            self.__current += 1
+        return self.__previous()
+
+    def __previous(self) -> Token:
+        return self.__tokens[self.__current - 1]
+
+    def __check_identifier(self):
+        if self.__is_at_end():
+            return False
+
+        return self.__peek().token_type == TokenType.IDENTIFIER
+
+    def __objective_function(self):
+        if not self.__match(TokenType.MAX) and not self.__match(TokenType.MIN):
+            raise LPParsingError(f"Expected 'max' or 'min' for objective function, got {self.__peek()}")
+
+        max_min = MaxOrMin.MAX if self.__previous().token_type == TokenType.MAX else MaxOrMin.MIN
+
+        formula = self.__formula()
+
+        self.__lp.set_objective(max_min, formula)
+
+    def __match(self, token_type: TokenType) -> bool:
+        if self.__check(token_type):
             self.__advance()
+            return True
+        return False
 
-    def __formula(self) -> list[float]:
-        coefficients = [0] * (self.num_var + 1)
-        token = self.__advance()
-        if token.token_type == TokenType.IDENTIFIER:
-            var_name = token.lexem
-            var_index = int(var_name[1:])
-            if var_index <= 0 or var_index > self.num_var:
-                raise ValueError("Invalid variable name syntax")
+    def __variable(self):
+        if not self.__check_identifier() or not self.__peek().lexem.startswith('x'):
+            raise LPParsingError(f"Expected variable (formal: x<number>), got {self.__peek()}")
 
-            coefficients[var_index] += 1
-        elif token.token_type == TokenType.MINUS:
-            next_token = self.__advance()
-            if next_token.token_type == TokenType.IDENTIFIER:
-                var_name = token.lexem
-                var_index = int(var_name[1:])
-                if var_index <= 0 or var_index > self.num_var:
-                    raise ValueError("Invalid variable name")
+        var_token = self.__advance()
+        var_name = var_token.lexem
 
-                coefficients[var_index] += -1
+        try:
+            index = int(var_name[1:])
 
-            elif next_token.token_type.is_num():
-                coef = float(next_token.lexem)
-
-                if self.__peek().token_type != TokenType.IDENTIFIER:
-                    raise ValueError("Invalid formula syntax")
-
-                ident_token = self.__advance()
-
-                var_name = ident_token.lexem
-                var_index = int(var_name[1:])
-                if var_index <= 0 or var_index > self.num_var:
-                    raise ValueError("Invalid variable name syntax")
-
-                coefficients[var_index] += -coef
-
+            if index in self.__lp.variables:
+                return self.__lp.variables[index]
             else:
-                raise ValueError("Invalud formula syntax")
-        elif token.token_type == TokenType.PLUS:
-            next_token = self.__advance()
-            if next_token.token_type == TokenType.IDENTIFIER:
-                var_name = token.lexem
-                var_index = int(var_name[1:])
-                if var_index <= 0 or var_index > self.num_var:
-                    raise ValueError("Invalid variable name")
+                return Variable(index, None)
+        except ValueError:
+            raise LPParsingError(f"Invalid variable name: {var_name}. Expected format: x<number>")
 
-                coefficients[var_index] += 1
+    def __formula(self):
+        formula = Formula()
 
-            elif next_token.token_type.is_num():
-                coef = float(next_token.lexem)
-
-                if self.__peek().token_type != TokenType.IDENTIFIER:
-                    raise ValueError("Invalid formula syntax")
-
-                ident_token = self.__advance()
-
-                var_name = ident_token.lexem
-                var_index = int(var_name[1:])
-                if var_index <= 0 or var_index > self.num_var:
-                    raise ValueError("Invalid variable name syntax")
-
-                coefficients[var_index] += coef
-
-            else:
-                raise ValueError("Invalud formula syntax")
-        elif token.token_type.is_num():
-            coef = float(token.lexem)
-
-            if self.__peek().token_type.is_sign():
-                coefficients[-1] += coef
-            elif self.__peek().token_type != TokenType.IDENTIFIER:
-                raise ValueError("Invalid formula syntax")
-
-            ident_token = self.__advance()
-
-            var_name = ident_token.lexem
-            var_index = int(var_name[1:])
-            if var_index <= 0 or var_index > self.num_var:
-                raise ValueError("Invalid variable name syntax")
-
-            coefficients[var_index] += coef
+        if self.__match(TokenType.PLUS) or self.__match(TokenType.MINUS):
+            sign = 1 if self.__previous().token_type == TokenType.PLUS else -1
+            term = self.__unit()
+            term.coefficient *= sign
+            formula.add_term(term)
         else:
-            raise ValueError("Invalid formula syntax")
+            formula.add_term(self.__unit())
 
-        while not (self.__peek().token_type == TokenType.NEW_LINE
-                   or self.__peek().token_type.is_operator()):
-            token = self.__advance()
+        while self.__match(TokenType.PLUS) or self.__match(TokenType.MINUS):
+            sign = 1 if self.__previous().token_type == TokenType.PLUS else -1
+            term = self.__unit()
+            term.coefficient *= sign
+            formula.add_term(term)
 
-            if token.token_type == TokenType.MINUS:
-                next_token = self.__advance()
-                if next_token.token_type == TokenType.IDENTIFIER:
-                    var_name = token.lexem
-                    var_index = int(var_name[1:])
-                    if var_index <= 0 or var_index > self.num_var:
-                        raise ValueError("Invalid variable name")
+        return formula
 
-                    coefficients[var_index] += -1
+    def __unit(self) -> Term:
+        if self.__check_number():
+            number = self.__parse_number()
 
-                elif next_token.token_type.is_num():
-                    coef = float(next_token.lexem)
+            if self.__check_identifier() and self.__peek().lexem.startswith('x'):
+                var = self.__variable()
+                if var.indx >= len(self.__lp.variables):
+                    raise LPParsingError(f"Variable x{var.indx} does not exist")
+                return Term(number, var)
+            else:
+                return Term(number)
 
-                    if self.__peek().token_type != TokenType.IDENTIFIER:
-                        raise ValueError("Invalid formula syntax")
+        elif self.__check_identifier() and self.__peek().lexem.startswith('x'):
+            var = self.__variable()
+            if var.indx >= len(self.__lp.variables):
+                raise LPParsingError(f"Variable x{var.indx} does not exist")
+            return Term(1.0, var)
+        else:
+            raise LPParsingError(f"Expected a number or variable, got {self.__peek()}")
 
-                    ident_token = self.__advance()
+    def __constraint(self):
+        left = self.__formula()
 
-                    var_name = ident_token.lexem
-                    var_index = int(var_name[1:])
-                    if var_index <= 0 or var_index > self.num_var:
-                        raise ValueError("Invalid variable name syntax")
+        if not self.__match_operator():
+            raise LPParsingError(f"Expected operator (=, <=, >=) in constraint, got {self.__peek()}")
 
-                    coefficients[var_index] += -coef
+        operator = self.__previous().token_type
 
-                else:
-                    raise ValueError("Invalud formula syntax")
-            elif token.token_type == TokenType.PLUS:
-                next_token = self.__advance()
-                if next_token.token_type == TokenType.IDENTIFIER:
-                    var_name = token.lexem
-                    var_index = int(var_name[1:])
-                    if var_index <= 0 or var_index > self.num_var:
-                        raise ValueError("Invalid variable name")
+        right = self.__formula()
 
-                    coefficients[var_index] += 1
+        constraint = Constraint(left, operator, right)
 
-                elif next_token.token_type.is_num():
-                    coef = float(next_token.lexem)
+        self.__lp.add_constraint(constraint)
 
-                    if self.__peek().token_type != TokenType.IDENTIFIER:
-                        raise ValueError("Invalid formula syntax")
+    def __match_operator(self):
+        if self.__check(TokenType.EQUAL) or self.__check(TokenType.LEQ) or self.__check(TokenType.GEQ):
+            self.__advance()
+            return True
+        return False
 
-                    ident_token = self.__advance()
+    def __check_number(self):
+        if self.__is_at_end():
+            return False
+        return self.__peek().token_type == TokenType.NUMBER or self.__peek().token_type == TokenType.DECIMAL
 
-                    var_name = ident_token.lexem
-                    var_index = int(var_name[1:])
-                    if var_index <= 0 or var_index > self.num_var:
-                        raise ValueError("Invalid variable name syntax")
-
-                    coefficients[var_index] += coef
-
-                else:
-                    raise ValueError("Invalid formula syntax")
-
-        return coefficients
+    def __parse_number(self):
+        if self.__match(TokenType.NUMBER) or self.__match(TokenType.DECIMAL):
+            return float(self.__previous().lexem)
+        else:
+            raise LPParsingError(f"Expected a number, got {self.__peek()}")
 
 
 if __name__ == "__main__":
-    print(LPScanner("5\nmax 3x1+2x2\nx1+x2>=0\nx1>=0").scan_tokens())
+    a = LPParser(LPScanner("""
+        x0 >= 0
+        x1 >= 0
+        max 3x0+2x1+
+        
+        
+        
+        
+        x0+x1<=100
+        """).scan_tokens()).parse()
+
+    print(a.solve().values)

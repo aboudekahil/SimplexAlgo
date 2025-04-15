@@ -78,21 +78,21 @@ class Simplex:
         Returns the solution of the simplex.
         :return: the solution of the simplex.
         """
-        # solution = {'z': self.__tableau[-1][-1]}
-        #
-        # for i, row in enumerate(self.__tableau[:-1]):
-        #     for j, col in enumerate(self.__tableau[i]):
-        #         if self.__tableau[i][j] == 1:
-        #             for i2, _ in enumerate(self.__tableau):
-        #                 if i2 != i and self.__tableau[i2][j] != 0:
-        #                     break
-        #             else:
-        #                 if (j + 1) >= (self.num_vars - self.number_of_slack_variables):
-        #                     solution[f"s{j - self.number_of_slack_variables}"] = row[-1]
-        #                 else:
-        #                     solution[f"x{j + 1}"] = row[-1]
-        #
-        # print(solution)
+        solution = {'z': self.__tableau[-1][-1]}
+
+        for i, row in enumerate(self.__tableau[:-1]):
+            for j, col in enumerate(self.__tableau[i]):
+                if self.__tableau[i][j] == 1:
+                    for i2, _ in enumerate(self.__tableau):
+                        if i2 != i and self.__tableau[i2][j] != 0:
+                            break
+                    else:
+                        if (j + 1) >= (self.num_vars - self.number_of_slack_variables):
+                            solution[f"s{j - self.number_of_slack_variables}"] = row[-1]
+                        else:
+                            solution[f"x{j + 1}"] = row[-1]
+
+        print(solution)
 
         return Solutions(self.__tableau[-1][-1])
 
@@ -112,12 +112,12 @@ class Simplex:
 
         for indx, domain in enumerate(self.domains):
             match domain:
-                case VariableDomains.GREATER_THAN_ZERO:
-                    str_rep += f"x{indx + 1} >= 0\n"
-                case VariableDomains.LESS_THAN_ZERO:
-                    str_rep += f"x{indx + 1} <= 0\n"
+                case VariableDomains.GEQ_THAN_ZERO:
+                    str_rep += f"x{indx} >= 0\n"
+                case VariableDomains.LEQ_THAN_ZERO:
+                    str_rep += f"x{indx} <= 0\n"
                 case VariableDomains.UNRESTRICTED:
-                    str_rep += f"x{indx + 1} in R\n"
+                    str_rep += f"x{indx} in R\n"
 
         return str_rep
 
@@ -212,7 +212,7 @@ class Simplex:
         :param indx: index of the slack variable in the constraints.
         """
         for i, constraint in enumerate(self.constraints):
-            constraint.values.append(sign if i == indx else 0)
+            constraint.values.insert(len(constraint.values) - 1, sign if i == indx else 0)
 
         self.objective_function.values.insert(len(self.objective_function.values) - 1, 0)
         self.num_vars += 1
