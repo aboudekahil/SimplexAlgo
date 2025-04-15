@@ -222,7 +222,8 @@ class LPParser:
         simplex_builder.set_to_standard_form()
         return simplex_builder.build()
 
-    def __term_to_list(self, term: list[Term], num_var: int) -> list[float]:
+    @staticmethod
+    def __term_to_list(term: list[Term], num_var: int) -> list[float]:
         coefs: list[int] = [0] * (num_var + 1)
 
         for iterm in term:
@@ -418,11 +419,7 @@ if __name__ == "__main__":
     a = LPParser(LPScanner("""
         x0 >= 0
         x1 >= 0
-        max 3x0+2x1+
-        
-        
-        
-        
+        max 3x0+2x1
         x0+x1<=100
         """).scan_tokens()).parse()
 

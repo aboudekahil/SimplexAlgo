@@ -1,7 +1,6 @@
 from typing import Optional
 
-from simplex import ObjectiveFunction, ConstraintFunction, Solution, NotFeasible, \
-    Solutions, VariableDomains, Operators
+from simplex import ObjectiveFunction, ConstraintFunction, Solution, NotFeasible, VariableDomains, Operators, NotBounded
 
 
 class Simplex:
@@ -60,7 +59,7 @@ class Simplex:
 
     def __fix_pivot(self, pivot_indx: tuple[int, int]):
         """
-        Does row echilon operations to make the soon-to-be pivot an actual pivot.
+        Does row echelon operations to make the soon-to-be pivot an actual pivot.
         :param pivot_indx: The location of the pivot
         """
         j, i = pivot_indx
@@ -73,7 +72,7 @@ class Simplex:
                 row_scale = [y * self.__tableau[indx][j] for y in self.__tableau[i]]
                 self.__tableau[indx] = [x - y for x, y in zip(self.__tableau[indx], row_scale)]
 
-    def __get_solution(self) -> Solutions:
+    def __get_solution(self) -> Solution:
         """
         Returns the solution of the simplex.
         :return: the solution of the simplex.
@@ -90,11 +89,11 @@ class Simplex:
                         if (j + 1) >= (self.num_vars - self.number_of_slack_variables):
                             solution[f"s{j - self.number_of_slack_variables}"] = row[-1]
                         else:
-                            solution[f"x{j + 1}"] = row[-1]
+                            solution[f"x{j}"] = row[-1]
 
         print(solution)
 
-        return Solutions(self.__tableau[-1][-1])
+        return Solution(self.__tableau[-1][-1])
 
     def __str__(self):
         """
@@ -231,11 +230,10 @@ class Simplex:
     def __check_if_two_step(self) -> bool:
         """
         checks if the simplex requires two steps to solve.
-        :return: True if needs two steps false otherwise.
+        :return: True if it needs two steps false otherwise.
         """
         for constraint in self.constraints:
-            if (constraint.operator == Operators.EQUAL
-                    or constraint.operator == Operators.GEQ):
+            if constraint.operator == Operators.EQUAL or constraint.operator == Operators.GEQ:
                 return True
         return False
 
@@ -256,13 +254,13 @@ class Simplex:
             pivot = self.__find_first_phase_pivot()
             if pivot[1] < 0:
                 # TODO pivot less than 0 error fix
-                raise ValueError("Error pivot less than 0")
+                raise NotBounded()
 
             self.__fix_pivot(pivot)
 
         if self.__tableau[-1][-1] != 0:
             # TODO first phase failed error
-            raise ValueError("first phase failed error")
+            raise NotFeasible()
 
         self.__tableau = self.__tableau[:-1]
 
