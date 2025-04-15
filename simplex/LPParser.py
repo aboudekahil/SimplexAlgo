@@ -380,7 +380,7 @@ class LPParser:
                 raise LPParsingError(f"Variable x{var.indx} does not exist")
             return Term(1.0, var)
         else:
-            raise LPParsingError(f"Expected a number or variable, got {self.__peek()}")
+            raise LPParsingError(f"Expected a number or variable, got {self.__peek()} ")
 
     def __constraint(self):
         left = self.__formula()
