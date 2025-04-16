@@ -34,9 +34,11 @@ class TokenType(Enum):
 
 
 class Token:
-    def __init__(self, token_type: TokenType, lexem: str):
+    def __init__(self, token_type: TokenType, lexem: str, line_number: int, column: int):
         self.token_type = token_type
         self.lexem = lexem
+        self.line_number = line_number
+        self.column = column
 
     def __str__(self):
         return f"{self.token_type}: {self.lexem}"
@@ -108,7 +110,7 @@ class LPScanner:
             self.start = self.current
             self.__scan_token()
 
-        self.tokens.append(Token(TokenType.EOF, ""))
+        self.tokens.append(Token(TokenType.EOF, "", self.line_number, self.line_char))
 
         return self.tokens
 
@@ -172,7 +174,7 @@ class LPScanner:
 
     def __add_token(self, token_type: TokenType):
         text = self.text[self.start: self.current]
-        self.tokens.append(Token(token_type, text))
+        self.tokens.append(Token(token_type, text, self.line_number, self.line_char))
 
     def __peek(self) -> str:
         if self.__is_at_end(): return '\0'
@@ -200,12 +202,12 @@ class LPScanner:
 
         self.__add_token(token_type)
 
+
 class LPParser:
     def __init__(self, tokens: list[Token]):
         self.__tokens = tokens
         self.__current = 0
         self.__lp = LinearProgram()
-
 
     def parse(self) -> Simplex:
         self.__simplex()
@@ -216,8 +218,9 @@ class LPParser:
             self.__lp.objective_function[1].terms, len(self.__lp.variables))))
 
         for constraint in self.__lp.constraints:
-            simplex_builder.add_constraint(ConstraintFunction(constraint.operator, *self.__constraint_to_list(constraint,
-                                                                                                              len(self.__lp.variables))))
+            simplex_builder.add_constraint(ConstraintFunction(constraint.operator,
+                                                              *self.__constraint_to_list(constraint,
+                                                                                         len(self.__lp.variables))))
 
         simplex_builder.set_to_standard_form()
         return simplex_builder.build()
@@ -228,9 +231,9 @@ class LPParser:
 
         for iterm in term:
             if iterm.variable is not None:
-                coefs[iterm.variable.indx] = iterm.coefficient
+                coefs[iterm.variable.indx] += iterm.coefficient
             else:
-                coefs[-1] = iterm.coefficient
+                coefs[-1] += iterm.coefficient
 
         return coefs
 
@@ -239,7 +242,7 @@ class LPParser:
         left_coef = self.__term_to_list(constraint.left.terms, num_var)
 
         for indx, n in enumerate(left_coef):
-            coefs[indx] = n * (1 if indx < num_var else -1)
+            coefs[indx] += n * (1 if indx < num_var else -1)
 
         right_coef = self.__term_to_list(constraint.right.terms, num_var)
         for indx, n in enumerate(right_coef):
@@ -279,7 +282,7 @@ class LPParser:
             var.domain = VariableDomains.GEQ_THAN_ZERO
         else:
             raise LPParsingError(
-                f"Unrecognized domain for x{var.indx}, only available options are UNRESTRICTED, LEQ, GEQ")
+                f"Unrecognized domain for x{var.indx} at {self.__previous().line_number}:{self.__previous().column}, only available options are UNRESTRICTED, LEQ, GEQ")
 
         self.__advance()
         self.__advance()
@@ -313,7 +316,8 @@ class LPParser:
 
     def __objective_function(self):
         if not self.__match(TokenType.MAX) and not self.__match(TokenType.MIN):
-            raise LPParsingError(f"Expected 'max' or 'min' for objective function, got {self.__peek()}")
+            raise LPParsingError(
+                f"Expected 'max' or 'min' for objective function, got {self.__peek()} at {self.__peek().line_number}:{self.__peek().column}")
 
         max_min = MaxOrMin.MAX if self.__previous().token_type == TokenType.MAX else MaxOrMin.MIN
 
@@ -329,7 +333,8 @@ class LPParser:
 
     def __variable(self):
         if not self.__check_identifier() or not self.__peek().lexem.startswith('x'):
-            raise LPParsingError(f"Expected variable (formal: x<number>), got {self.__peek()}")
+            raise LPParsingError(
+                f"Expected variable (formal: x<number>), got {self.__peek()} at {self.__peek().line_number}:{self.__peek().column}")
 
         var_token = self.__advance()
         var_name = var_token.lexem
@@ -342,7 +347,8 @@ class LPParser:
             else:
                 return Variable(index, None)
         except ValueError:
-            raise LPParsingError(f"Invalid variable name: {var_name}. Expected format: x<number>")
+            raise LPParsingError(
+                f"Invalid variable name: {var_name} at {self.__peek().line_number}:{self.__peek().column}. Expected format: x<number>")
 
     def __formula(self):
         formula = Formula()
@@ -419,7 +425,7 @@ if __name__ == "__main__":
     a = LPParser(LPScanner("""
         x0 >= 0
         x1 >= 0
-        max 3x0+2x1
+        max 3x0+2x1+90+80
         x0+x1<=100
         """).scan_tokens()).parse()
 
