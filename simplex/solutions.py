@@ -14,14 +14,13 @@ class NotFeasible(Solutions, Exception):
     Indicates that the simplex solution is not feasible
     """
 
-    def __init__(self):
+    def __init__(self, msg="Linear problem is not feasible"):
         super(NotFeasible, self).__init__()
 
-        self.msg = "Linear problem is not feasible"
+        self.msg = msg
 
     def __str__(self):
         return self.msg
-
 
 class Solution(Solutions):
     def __init__(self, values: dict[str, Fraction]):

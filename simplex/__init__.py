@@ -3,3 +3,12 @@ from simplex.solutions import *
 from simplex.functions import *
 from simplex.simplex_builder import SimplexBuilder
 from simplex.simplex_class import *
+from simplex.exceptions import *
+# from simplex.exceptions import (
+#     SimplexError,
+#     SimplexMultipleSolutionsError,
+#     SimplexDegeneracyError, 
+#     SimplexUnboundedError,
+#     SimplexCyclicError,
+#     SimplexInvalidInputError
+# )

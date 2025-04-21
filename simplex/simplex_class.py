@@ -1,8 +1,15 @@
 from fractions import Fraction
 from typing import Optional
 
-from simplex import ObjectiveFunction, ConstraintFunction, Solution, NotFeasible, VariableDomains, Operators, NotBounded
+from simplex import MaxOrMin, ObjectiveFunction, ConstraintFunction, Solution, NotFeasible, VariableDomains, Operators, NotBounded
 
+from simplex.exceptions import (
+    SimplexMultipleSolutionsError,
+    SimplexUnboundedError,
+    SimplexCyclicError,
+    SimplexDegeneracyError,
+    SimplexInfeasibleError
+)
 
 class Simplex:
     def __init__(self):
@@ -24,18 +31,46 @@ class Simplex:
         :return: The simplex solution
         """
         self.__tableau = self.__create_tableau()
+        history = set()
+        # Check for unbounded solution before anything else
+        if self.__detect_unbounded_solution():
+            raise SimplexUnboundedError()
 
         if self.__check_if_two_step():
+            # Check for unbounded solution before first phase
+            if self.__detect_unbounded_solution(use_aux=True):
+                raise SimplexUnboundedError()
+                
             self.__tableau = self.__solve_first_phase()
 
         while not self.__is_solved():
+            # Check for unbounded solution
+            if self.__detect_unbounded_solution():
+                raise SimplexUnboundedError()
+                
+            # Check for cycling - add the current tableau state to history
+            tableau_sig = self.__get_tableau_signature()
+            if tableau_sig in history:
+                raise SimplexCyclicError()
+            history.add(tableau_sig)
+                
             pivot = self.__find_pivot()
             if pivot[1] < 0:
-                return NotFeasible()
+                raise NotFeasible()
 
             self.__fix_pivot(pivot)
+            
+
+        # After finding a solution, check for multiple solutions
+        if self.__detect_multiple_solutions():
+            raise SimplexMultipleSolutionsError()
+        
+        # Check for degeneracy
+        if self.__detect_degeneracy():
+            raise SimplexDegeneracyError()
 
         return self.__get_solution()
+
 
     def __is_solved(self) -> bool:
         """
@@ -254,19 +289,30 @@ class Simplex:
         if number_of_artificial_variables == 0:
             return self.__tableau
 
+        # Create a history set for the first phase
+        first_phase_history = set()
+
         while not self.__is_solved():
+            # Always check for unboundedness first - this is critical!
+            if self.__detect_unbounded_solution(use_aux=True):
+                raise SimplexUnboundedError()
+                
+            # Check for cycling
+            tableau_sig = tuple(tuple(round(float(cell), 6) for cell in row) for row in self.__tableau)
+            if tableau_sig in first_phase_history:
+                raise SimplexCyclicError()
+            first_phase_history.add(tableau_sig)
+
             pivot = self.__find_first_phase_pivot()
             if pivot[1] < 0:
-                # TODO pivot less than 0 error fix
-                raise NotBounded()
-
+                raise SimplexInfeasibleError()
+                
             self.__fix_pivot(pivot)
 
         if self.__tableau[-1][-1] != 0:
-            # TODO first phase failed error
-            raise NotFeasible()
+            raise SimplexInfeasibleError()
 
-        self.__tableau = self.__tableau[:-1]
+        self.__tableau = self.__tableau[:-1]  # Remove auxiliary objective row
 
         for row in self.__tableau:
             for i in range(number_of_artificial_variables):
@@ -309,3 +355,115 @@ class Simplex:
                         min_ratio_indx = indx
 
         return min_ratio_indx
+
+    # --------------rabab-------------------
+
+    def __get_tableau_signature(self):
+        """
+        Returns a hashable representation of the current tableau for cycle detection.
+        """
+        # Round values to avoid floating point issues and convert to tuple for hashability
+        return tuple(tuple(round(float(cell), 6) for cell in row) for row in self.__tableau)
+
+
+    def __detect_unbounded_solution(self, use_aux: bool = False) -> bool:
+        """
+        Check if the current tableau represents an unbounded problem.
+        A maximization problem is unbounded if there is a negative entry in the objective row
+        and all entries in that column in the constraint rows are non-positive.
+        """
+        if self.__tableau is None:
+            return False
+            
+        last_row_index = len(self.__tableau) - 1
+        if use_aux and len(self.__tableau) > 1:
+            last_row_index = len(self.__tableau) - 2  # Use auxiliary objective row for phase 1
+        
+        z_row = self.__tableau[last_row_index]
+        
+        # For each non-basic variable (column)
+        for col in range(len(z_row) - 1):  # skip RHS
+            obj_coeff = z_row[col]
+            
+            # For maximization problems, we look for negative coefficients
+            if obj_coeff < 0:
+                # Check if all entries in the constraints are <= 0
+                all_non_positive = True
+                for row in range(last_row_index):  # Only check constraint rows
+                    if self.__tableau[row][col] > 0:
+                        all_non_positive = False
+                        break
+                
+                if all_non_positive:
+                    # Found a column with negative objective coefficient and all non-positive constraint coefficients
+                    return True
+        
+        return False
+
+    # First fix the __detect_multiple_solutions() method in the Simplex class
+    def __detect_multiple_solutions(self) -> bool:
+        """
+        Check if the problem has multiple optimal solutions.
+        This happens when there is a non-basic variable with zero reduced cost (zero in the objective row).
+        """
+        if not self.__is_solved():
+            return False
+        
+        # First identify which columns correspond to basic variables
+        basic_columns = set()
+        for i in range(len(self.__tableau) - 1):  # For each constraint row
+            # Find the basic variable in this row (if any)
+            for j in range(len(self.__tableau[0]) - 1):  # For each column except RHS
+                if abs(self.__tableau[i][j] - 1.0) < 1e-10:  # Close to 1 (accounting for floating point)
+                    # Check if this is a basic variable column (unit column)
+                    is_unit = True
+                    for k in range(len(self.__tableau) - 1):
+                        if k != i and abs(self.__tableau[k][j]) > 1e-10:  # Not close to 0
+                            is_unit = False
+                            break
+                    if is_unit:
+                        basic_columns.add(j)
+                        break
+        
+        # Now check if any non-basic variable has a zero reduced cost
+        for j in range(len(self.__tableau[0]) - 1):  # For each column except RHS
+            if j not in basic_columns and abs(self.__tableau[-1][j]) < 1e-10:
+                # Non-basic with zero cost
+                return True
+        
+        return False
+    def __detect_degeneracy(self) -> bool:
+        """Check if the solution is degenerate by looking for basic variables with value 0."""
+        # First identify basic variables
+        basic_vars = []
+        for j in range(len(self.__tableau[0]) - 1):
+            for i in range(len(self.__tableau) - 1):
+                if self.__tableau[i][j] == 1:
+                    # Check if this is a unit column
+                    is_unit_column = True
+                    for k in range(len(self.__tableau) - 1):
+                        if k != i and self.__tableau[k][j] != 0:
+                            is_unit_column = False
+                            break
+                    if is_unit_column:
+                        basic_vars.append((i, j))
+                        break
+        
+        # Check if any basic variable has value 0
+        for i, j in basic_vars:
+            if self.__tableau[i][-1] == 0:
+                return True
+        
+        return False
+    def __detect_cycling(self, history) -> bool:
+        def tableau_signature(tableau):
+            # Round all entries to avoid floating point issues and flatten the tableau
+            return tuple(tuple(round(float(cell), 6) for cell in row) for row in tableau)
+
+        signature = tableau_signature(self.__tableau)
+        if signature in history:
+            print("Cycling detected!")  # Optional debug
+            return True
+        history.add(signature)
+        return False
+

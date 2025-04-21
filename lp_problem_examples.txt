@@ -7,6 +7,7 @@ x2 <= 10
 and x1,x2 >= 0
 solution: x1=9,x2=10 and max z=1160
 passed
+included & passed in unit tests "test_regular_solution"
 
 Test Case 2:
 MAX z = 15x1 + 10x2
