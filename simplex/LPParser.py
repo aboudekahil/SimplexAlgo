@@ -426,7 +426,7 @@ if __name__ == "__main__":
         x0 >= 0
         x1 >= 0
         max 3x0+2x1+90+80
-        x0+x1<=100
+        x0+x1>=100
         """).scan_tokens()).parse()
 
     print(a.solve().values)

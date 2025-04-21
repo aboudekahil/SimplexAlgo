@@ -21,7 +21,7 @@ if __name__ == "__main__":
                                             VariableDomains.GEQ_THAN_ZERO)
                         .set_objective_function(ObjectiveFunction(MaxOrMin.MAX, c_x, c_y, 0))
                         .add_constraint(ConstraintFunction(Operators.LEQ, a1, a2, b1))
-                        .add_constraint(ConstraintFunction(Operators.EQUAL, c1, c2, b2))
+                        .add_constraint(ConstraintFunction(Operators.LEQ, c1, c2, b2))
                         .set_to_standard_form()
                         .build())
 
@@ -31,7 +31,6 @@ if __name__ == "__main__":
     if method == "simplex":
         # Solve using the Simplex algorithm
         answer = simplex.solve()
-        print(answer)
         if answer.__class__ != NotFeasible:
             print(answer.values)
     elif method == "graphical":

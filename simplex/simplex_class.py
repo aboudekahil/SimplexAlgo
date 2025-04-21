@@ -91,9 +91,7 @@ class Simplex:
                         else:
                             solution[f"x{j}"] = row[-1]
 
-        print(solution)
-
-        return Solution(self.__tableau[-1][-1])
+        return Solution(solution)
 
     def __str__(self):
         """
