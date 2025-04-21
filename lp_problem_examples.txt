@@ -5,8 +5,8 @@ subject to
 x1 <= 15
 x2 <= 10
 and x1,x2 >= 0
-solution: 1=9,x2=10 and max z=1160
-
+solution: x1=9,x2=10 and max z=1160
+passed
 
 Test Case 2:
 MAX z = 15x1 + 10x2
@@ -16,7 +16,7 @@ subject to
 5x2 <= 200
 and x1,x2 >= 0
 solution: x1=60,x2=20 and max z=1100
-
+passed
 
 Test Case 3:
 MIN z = 3x1 + 2x2
@@ -26,7 +26,7 @@ x1 + x2 >= 6
 x1 + 4x2 >= 12
 and x1,x2 >= 0
 solution: x1=1,x2=5 and min z=13.
-
+not passed: unbounded 
 
 Test Case 4:
 MIN z = 200x1 + 400x2
@@ -36,7 +36,7 @@ x1 + 3x2 >= 40
 x1 + 2x2 <= 35
 and x1,x2 >= 0
 solution:  x1=10,x2=10 and min z=6000
-Note: error in simplex
+not passed: unbounded
 
 Test Case 5:
 MAX z = 10x1 + 6x2
@@ -45,7 +45,7 @@ subject to
 x1 + 2x2 <= 18
 and x1,x2 >= 0
 solution: multiple optimal solutions (6, 0) and (0.86,8.57) max z=60.
-
+graphical_solution passed but simplex need to state that it's multiple optimal solution
 
 Test Case 6:
 MAX Z = 5X1 + 4X2
@@ -54,7 +54,7 @@ X1 - 2X2 <= 1
 X1 + 2X2 >= 3
 and X1,X2 >= 0
 solution: unbounded
-Note: simplex return not feasible, graphically can't solve
+Note: simplex return not feasible, graphically solve it wrong
 
 Test Case 7:
 MAX Z = 6X1 - 4X2
@@ -63,6 +63,7 @@ subject to
 4X1 + 8X2 >= 16
 and X1,X2 >= 0
 solution: infeasible
+passed
 
 
 

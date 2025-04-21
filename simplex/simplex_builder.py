@@ -187,4 +187,3 @@ class SimplexBuilder:
     def __add_var(self, domain: VariableDomains):
         self.__num_vars += 1
         self.__domains.append(domain)
-

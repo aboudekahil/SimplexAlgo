@@ -61,26 +61,21 @@ def calculate_dynamic_range(intersection_points):
 
 
 def is_unbounded(feasible_polygon, constraints, objective, maximize):
-    """
-    Check if the problem is unbounded by examining the feasible region and objective direction.
-    """
     if not feasible_polygon:
         return False
 
     c1, c2 = objective
     if not maximize:
-        c1, c2 = -c1, -c2
+        c1, c2 = -c1, -c2  # Flip direction for minimization
 
-    # Check each constraint's ability to bound the objective direction
-    can_grow_indefinitely = True
+    # Check if the objective direction is bounded by any constraint
     for a1, a2, b in constraints:
-        # Calculate dot product between constraint normal and objective direction
         dot_product = a1 * c1 + a2 * c2
-        if dot_product > 0:
-            can_grow_indefinitely = False
-            break
+        if dot_product > 0:  # Constraint bounds the objective direction
+            return False
 
-    return can_grow_indefinitely
+    # If no constraint bounds the objective direction, it's unbounded
+    return True
 
 def solve_graphically(objective, constraints, maximize=True):
     """
@@ -94,6 +89,9 @@ def solve_graphically(objective, constraints, maximize=True):
     """
     # Unpack objective coefficients at the start
     c1, c2 = objective
+
+    if not maximize:
+        c1, c2 = -c1, -c2  # Flip direction for minimization
 
     # Normalize constraints to handle both "<=" and ">="
     normalized_constraints = []
