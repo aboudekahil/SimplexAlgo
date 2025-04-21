@@ -2,17 +2,23 @@ from simplex import *
 from simplex.graphical_solution import solve_graphically
 
 if __name__ == "__main__":
+    # For graphical solution
+    maximize = True
     #Objective function coefficient max c_x.x + c_y.y
-    c_x = 4
-    c_y = -7
+    c_x = 6
+    c_y = -4
     # Constraints coefficients a1.x + a2.y <= b1
-    a1 = 5
-    a2 = 1
-    b1 = 15
+    a1 = 2
+    a2 = 4
+    b1 = 4
     # Constraints coefficients c1.x + c2.y <= b2
-    c1 = 2
-    c2 = -2
-    b2 = 7
+    c1 = 4
+    c2 = 8
+    b2 = 16
+    # Constraints coefficients d1.x + d2.y <= b3
+    d1 = 0
+    d2 = 0
+    b3 = 0
     
     # Define the problem
     simplex: Simplex = (SimplexBuilder()
@@ -21,7 +27,8 @@ if __name__ == "__main__":
                                             VariableDomains.GEQ_THAN_ZERO)
                         .set_objective_function(ObjectiveFunction(MaxOrMin.MAX, c_x, c_y, 0))
                         .add_constraint(ConstraintFunction(Operators.LEQ, a1, a2, b1))
-                        .add_constraint(ConstraintFunction(Operators.EQUAL, c1, c2, b2))
+                        .add_constraint(ConstraintFunction(Operators.GEQ, c1, c2, b2))
+                        #.add_constraint(ConstraintFunction(Operators.LEQ, d1, d2, b3))
                         .set_to_standard_form()
                         .build())
 
@@ -39,9 +46,11 @@ if __name__ == "__main__":
         solve_graphically(
             objective=(c_x, c_y),  # Coefficients of the objective function
             constraints=[
-                (a1, a2, b1),  # Coefficients and RHS of the first constraint
-                (c1, c2, b2)    # Coefficients and RHS of the second constraint
-            ]
+                (a1, a2, b1, "<="),  # Coefficients and RHS of the first constraint
+                (c1, c2, b2, ">=")    # Coefficients and RHS of the second constraint
+                #,(d1, d2, b3, "<=")     # Coefficients and RHS of the third constraint
+            ],
+            maximize=maximize  # Set to True for maximization, False for minimization
         )
     else:
         print("Invalid method selected. Please choose either 'simplex' or 'graphical'.")
