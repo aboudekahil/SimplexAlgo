@@ -181,9 +181,6 @@ class SimplexBuilder:
         self.__objective_function = ObjectiveFunction(MaxOrMin(MaxOrMin.MAX), *values)
 
 
-
-
     def __add_var(self, domain: VariableDomains):
         self.__num_vars += 1
         self.__domains.append(domain)
-

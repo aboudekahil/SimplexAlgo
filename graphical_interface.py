@@ -3,103 +3,164 @@ from tkinter import messagebox
 from simplex import *
 from simplex.graphical_solution import solve_graphically
 
-def solve_simplex():
-    try:
-        # Get input values
-        c_x = float(entry_cx.get())
-        c_y = float(entry_cy.get())
-        a1 = float(entry_a1.get())
-        a2 = float(entry_a2.get())
-        b1 = float(entry_b1.get())
-        c1 = float(entry_c1.get())
-        c2 = float(entry_c2.get())
-        b2 = float(entry_b2.get())
+class SimplexGUI:
+    def __init__(self, root):
+        self.root = root
+        self.root.title("Simplex Solver")
 
-        # Define the problem
-        simplex = (SimplexBuilder()
-                   .set_number_of_vars(2,
-                                       VariableDomains.GEQ_THAN_ZERO,
-                                       VariableDomains.GEQ_THAN_ZERO)
-                   .set_objective_function(ObjectiveFunction(MaxOrMin.MAX, c_x, c_y, 0))
-                   .add_constraint(ConstraintFunction(Operators.LEQ, a1, a2, b1))
-                   .add_constraint(ConstraintFunction(Operators.LEQ, c1, c2, b2))
-                   .set_to_standard_form()
-                   .build())
+        self.var_entries = []
+        self.constraint_entries = []
 
-        # Solve using the Simplex algorithm
-        answer = simplex.solve()
-        if answer.__class__ == NotFeasible:
-            messagebox.showinfo("Result", "The problem is not feasible.")
-        else:
-            messagebox.showinfo("Result", f"Optimal Solution: {answer.values}")
-    except Exception as e:
-        messagebox.showerror("Error", f"An error occurred: {e}")
+        # Objective function type (MAX or MIN)
+        tk.Label(root, text="Objective Function Type:").grid(row=0, column=0, sticky="w")
+        self.obj_type = tk.StringVar(value="MAX")  # Default to MAX
+        obj_type_menu = tk.OptionMenu(root, self.obj_type, "MAX", "MIN")
+        obj_type_menu.grid(row=0, column=1, sticky="w")
 
-def solve_graphical():
-    try:
-        # Get input values
-        c_x = float(entry_cx.get())
-        c_y = float(entry_cy.get())
-        a1 = float(entry_a1.get())
-        a2 = float(entry_a2.get())
-        b1 = float(entry_b1.get())
-        c1 = float(entry_c1.get())
-        c2 = float(entry_c2.get())
-        b2 = float(entry_b2.get())
+        # Objective function section
+        tk.Label(root, text="Objective Function: Z = ").grid(row=1, column=0, sticky="w")
+        self.obj_frame = tk.Frame(root)
+        self.obj_frame.grid(row=2, column=0, columnspan=3, sticky="w")
+        self.add_variable_entry()
 
-        # Solve graphically
-        solve_graphically(
-            objective=(c_x, c_y),
-            constraints=[
-                (a1, a2, b1),
-                (c1, c2, b2)
-            ]
-        )
-    except Exception as e:
-        messagebox.showerror("Error", f"An error occurred: {e}")
+        btn_add_var = tk.Button(root, text="+", command=self.add_variable_entry)
+        btn_add_var.grid(row=2, column=3, sticky="w")
 
-# Create the main window
-root = tk.Tk()
-root.title("Simplex Solver")
+        # Constraints section
+        tk.Label(root, text="Constraints:").grid(row=3, column=0, sticky="w")
+        self.constr_frame = tk.Frame(root)
+        self.constr_frame.grid(row=4, column=0, columnspan=4, sticky="w")
 
-# Objective function inputs
-tk.Label(root, text="Objective Function: Max Z = c_x*x + c_y*y").grid(row=0, column=0, columnspan=2)
-tk.Label(root, text="c_x:").grid(row=1, column=0)
-entry_cx = tk.Entry(root)
-entry_cx.grid(row=1, column=1)
-tk.Label(root, text="c_y:").grid(row=2, column=0)
-entry_cy = tk.Entry(root)
-entry_cy.grid(row=2, column=1)
+        # Remove the initial call to add_constraint_entry
+        # Constraints will only be added when the user presses the "+" button
+        btn_add_constr = tk.Button(root, text="+", command=self.add_constraint_entry)
+        btn_add_constr.grid(row=4, column=4, sticky="w")
 
-# Constraint 1 inputs
-tk.Label(root, text="Constraint 1 (a1.x + a2.y <= b1):").grid(row=3, column=0, columnspan=2)
-tk.Label(root, text="a1:").grid(row=4, column=0)
-entry_a1 = tk.Entry(root)
-entry_a1.grid(row=4, column=1)
-tk.Label(root, text="a2:").grid(row=5, column=0)
-entry_a2 = tk.Entry(root)
-entry_a2.grid(row=5, column=1)
-tk.Label(root, text="b1:").grid(row=6, column=0)
-entry_b1 = tk.Entry(root)
-entry_b1.grid(row=6, column=1)
+        # Buttons
+        btn_simplex = tk.Button(root, text="Solve with Simplex", command=self.solve_simplex)
+        btn_simplex.grid(row=99, column=0, pady=10)
+        btn_graphical = tk.Button(root, text="Solve Graphically", command=self.solve_graphical)
+        btn_graphical.grid(row=99, column=1, pady=10)
+        btn_reset = tk.Button(root, text="Reset", command=self.reset)
+        btn_reset.grid(row=99, column=2, pady=10)
 
-# Constraint 2 inputs
-tk.Label(root, text="Constraint 2 (c1.x + c2.y <= b2):").grid(row=7, column=0, columnspan=2)
-tk.Label(root, text="c1:").grid(row=8, column=0)
-entry_c1 = tk.Entry(root)
-entry_c1.grid(row=8, column=1)
-tk.Label(root, text="c2:").grid(row=9, column=0)
-entry_c2 = tk.Entry(root)
-entry_c2.grid(row=9, column=1)
-tk.Label(root, text="b2:").grid(row=10, column=0)
-entry_b2 = tk.Entry(root)
-entry_b2.grid(row=10, column=1)
+    def add_variable_entry(self):
+        col = len(self.var_entries)
+        entry = tk.Entry(self.obj_frame, width=5)
+        entry.grid(row=0, column=col*2)
+        tk.Label(self.obj_frame, text=f"x{col+1}").grid(row=0, column=col*2+1)
+        self.var_entries.append(entry)
 
-# Buttons
-btn_simplex = tk.Button(root, text="Solve with Simplex", command=solve_simplex)
-btn_simplex.grid(row=11, column=0, pady=10)
-btn_graphical = tk.Button(root, text="Solve Graphically", command=solve_graphical)
-btn_graphical.grid(row=11, column=1, pady=10)
+    def add_constraint_entry(self):
+        row = len(self.constraint_entries)
+        frame = tk.Frame(self.constr_frame)
+        frame.grid(row=row, column=0, sticky="w")
+        entries = []
 
-# Run the application
-root.mainloop()
+        # Add variable coefficients
+        for i in range(len(self.var_entries)):
+            e = tk.Entry(frame, width=5)
+            e.grid(row=0, column=i*2)
+            tk.Label(frame, text=f"x{i+1} +").grid(row=0, column=i*2+1)
+            entries.append(e)
+
+        # Add dropdown for constraint type (<=, >=, =)
+        constraint_type = tk.StringVar(value="<=")  # Default to <=
+        constraint_menu = tk.OptionMenu(frame, constraint_type, "<=", ">=", "=")
+        constraint_menu.grid(row=0, column=len(self.var_entries)*2)
+        entries.append(constraint_type)
+
+        # Add RHS entry
+        rhs = tk.Entry(frame, width=5)
+        rhs.grid(row=0, column=len(self.var_entries)*2+1)
+        entries.append(rhs)
+
+        self.constraint_entries.append(entries)
+
+    def reset(self):
+        # Clear variable entries
+        for entry in self.var_entries:
+            entry.destroy()
+        self.var_entries.clear()
+        for widget in self.obj_frame.winfo_children():
+            widget.destroy()
+        self.add_variable_entry()
+
+        # Clear constraint entries
+        for entries in self.constraint_entries:
+            for entry in entries:
+                # Only destroy widgets (not StringVar objects)
+                if isinstance(entry, tk.Widget):
+                    entry.destroy()
+        self.constraint_entries.clear()
+        for widget in self.constr_frame.winfo_children():
+            widget.destroy()
+
+        # Reset objective function type
+        self.obj_type.set("MAX")
+
+    def solve_simplex(self):
+        try:
+            # Get objective function coefficients
+            obj_coeffs = [float(entry.get()) for entry in self.var_entries]
+            obj_type = self.obj_type.get()
+
+            # Get constraints
+            constraints = []
+            for constraint in self.constraint_entries:
+                coeffs = [float(entry.get()) for entry in constraint[:-2] if isinstance(entry, tk.Entry)]  # Coefficients
+                constraint_type = constraint[-2].get()  # <=, >=, or =
+                rhs = float(constraint[-1].get())  # RHS
+                constraints.append((coeffs, constraint_type, rhs))
+
+            # Build the simplex problem
+            simplex = SimplexBuilder().set_number_of_vars(
+                len(obj_coeffs),
+                VariableDomains.GEQ_THAN_ZERO,
+                VariableDomains.GEQ_THAN_ZERO
+            ).set_objective_function(
+                ObjectiveFunction(MaxOrMin.MAX if obj_type == "MAX" else MaxOrMin.MIN, *obj_coeffs, 0)
+            )
+
+            for coeffs, constraint_type, rhs in constraints:
+                operator = Operators.LEQ if constraint_type == "<=" else Operators.GEQ if constraint_type == ">=" else Operators.EQ
+                simplex.add_constraint(ConstraintFunction(operator, *coeffs, rhs))
+
+            simplex = simplex.set_to_standard_form().build()
+
+            # Solve the problem
+            answer = simplex.solve()
+            if answer.__class__ != NotFeasible:
+                messagebox.showinfo("Simplex Solution", f"Optimal Solution: {answer.values}")
+            else:
+                messagebox.showerror("Simplex Solution", "The problem is not feasible.")
+        except Exception as e:
+            messagebox.showerror("Error", f"An error occurred: {e}")
+
+    def solve_graphical(self):
+        try:
+            # Get objective function coefficients
+            obj_coeffs = [float(entry.get()) for entry in self.var_entries]
+            obj_type = self.obj_type.get()
+
+            # Get constraints
+            constraints = []
+            for constraint in self.constraint_entries:
+                coeffs = [float(entry.get()) for entry in constraint[:-2]]  # Coefficients
+                constraint_type = constraint[-2].get()  # <=, >=, or =
+                rhs = float(constraint[-1].get())  # RHS
+                constraints.append((*coeffs, rhs, constraint_type))
+
+            # Solve graphically
+            solve_graphically(
+                objective=tuple(obj_coeffs),
+                constraints=constraints,
+                maximize=(obj_type == "MAX")
+            )
+        except Exception as e:
+            messagebox.showerror("Error", f"An error occurred: {e}")
+
+if __name__ == "__main__":
+    root = tk.Tk()
+    app = SimplexGUI(root)
+    root.mainloop()
