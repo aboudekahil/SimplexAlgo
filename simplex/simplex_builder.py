@@ -13,6 +13,7 @@ class SimplexBuilder:
         self.__constraints: list[ConstraintFunction] = []
         self.__num_vars: int = -1
         self.__domains: list[VariableDomains] = []
+        self.__was_min = False
 
     def set_number_of_vars(self, num_var: int, *domains: VariableDomains) -> Self:
         """
@@ -98,7 +99,8 @@ class SimplexBuilder:
         self.__domains = new_domains
         self.__num_vars = len(new_domains)
 
-        if self.__objective_function == MaxOrMin.MIN:
+        if self.__objective_function.operator == MaxOrMin.MIN:
+            self.__was_min = True
             self.__fix_min_to_max()
 
         return self
@@ -135,6 +137,7 @@ class SimplexBuilder:
         simplex.objective_function = self.__objective_function
         simplex.constraints = self.__constraints
         simplex.domains = self.__domains
+        simplex.was_min = self.__was_min
 
         return simplex
 
@@ -179,8 +182,6 @@ class SimplexBuilder:
         values = self.__objective_function.values
         values = map(lambda x: -x, values)
         self.__objective_function = ObjectiveFunction(MaxOrMin(MaxOrMin.MAX), *values)
-
-
 
 
     def __add_var(self, domain: VariableDomains):

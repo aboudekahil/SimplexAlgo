@@ -425,8 +425,10 @@ if __name__ == "__main__":
     a = LPParser(LPScanner("""
         x0 >= 0
         x1 >= 0
-        max 3x0+2x1+90+80
-        x0+x1>=100
+        min 200x0 + 400x1
+        x0+  x1 >= 20
+        x0 + 3x1 >= 40
+        x0 + 2x1 <= 35
         """).scan_tokens()).parse()
 
     print(a.solve().values)

@@ -1,3 +1,4 @@
+from fractions import Fraction
 from typing import Optional
 
 from simplex import ObjectiveFunction, ConstraintFunction, Solution, NotFeasible, VariableDomains, Operators, NotBounded
@@ -8,13 +9,14 @@ class Simplex:
         """
         Simplex Constructor
         """
-        self.__tableau: Optional[list[list[float]]] = None
+        self.__tableau: Optional[list[list[Fraction]]] = None
         self.__pivot = None
         self.num_vars: int = -1
         self.objective_function: Optional[ObjectiveFunction] = None
         self.constraints: Optional[list[ConstraintFunction]] = None
         self.domains = None
         self.number_of_slack_variables: int = 0
+        self.was_min = False
 
     def solve(self) -> Solution:
         """
@@ -91,6 +93,9 @@ class Simplex:
                         else:
                             solution[f"x{j}"] = row[-1]
 
+        if self.was_min:
+            solution['z'] *= -1
+
         return Solution(solution)
 
     def __str__(self):
@@ -118,7 +123,7 @@ class Simplex:
 
         return str_rep
 
-    def __create_tableau(self) -> list[list[float]]:
+    def __create_tableau(self) -> list[list[Fraction]]:
         """
         Creates the simplex tableau
         :return: the simplex tableau
@@ -150,10 +155,11 @@ class Simplex:
         tableau.append(z_arr)
 
         if len(artificial_to_add) > 0:
-            i_arr = [0] * (self.num_vars - len(artificial_to_add)) + ([-1] * len(artificial_to_add)) + [0]
+            i_arr = [Fraction.from_float(0)] * (self.num_vars - len(artificial_to_add)) + (
+                        [1] * len(artificial_to_add)) + [Fraction.from_float(0)]
             for indx in artificial_to_add:
-                # print(tableau[indx])
-                i_arr = [-(i_arr[i] + val) for i, val in enumerate(tableau[indx])]
+                for indx2, val in enumerate(tableau[indx]):
+                    i_arr[indx2] -= val
             tableau.append(i_arr)
 
         return tableau
@@ -235,7 +241,7 @@ class Simplex:
                 return True
         return False
 
-    def __solve_first_phase(self) -> list[list[float]]:
+    def __solve_first_phase(self) -> list[list[Fraction]]:
         """
         Solves the first phase in a two phase simplex.
         :return: the resulting tableau after the first phase.

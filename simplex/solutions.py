@@ -1,9 +1,10 @@
 # TODO fix solution schema, probably make it one class that has an enum that indicates the type of solution and
 # TODO attributes that give value
+from fractions import Fraction
 
 
 class Solutions:
-    def __init__(self, *values: float):
+    def __init__(self):
         self.values = {}
         self.msg = ""
 
@@ -23,7 +24,7 @@ class NotFeasible(Solutions, Exception):
 
 
 class Solution(Solutions):
-    def __init__(self, values: dict[str, float]):
+    def __init__(self, values: dict[str, Fraction]):
         """
         Solution constructor
         :param values: the z value

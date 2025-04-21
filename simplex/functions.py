@@ -1,3 +1,5 @@
+from fractions import Fraction
+
 from simplex.enums import MaxOrMin, Operators
 
 
@@ -6,14 +8,14 @@ class ObjectiveFunction:
     The objective function to be used in the simplex.
     """
 
-    def __init__(self, min_or_max: MaxOrMin, *args: float):
+    def __init__(self, min_or_max: MaxOrMin, *args: Fraction):
         """
         Constructor for the objective function.
         :param min_or_max: Whether we want to minimize or maximize a function.
         :param args: The coefficients of the objective function with the last one being the right hand side.
         """
         self.operator = min_or_max
-        self.values = list(args)
+        self.values = list(map(Fraction, args))
 
     @property
     def num_vars(self):
@@ -45,13 +47,13 @@ class ConstraintFunction:
     The constraint function to be used in the simplex.
     """
 
-    def __init__(self, operator: Operators, *args: float):
+    def __init__(self, operator: Operators, *args: Fraction):
         """
         Constraint function constructor
         :param operator: Operator used for which type of constraint it is.
         :param args: Coefficients of the constraint function with the last one being the right hand side.
         """
-        self.values = list(args)
+        self.values = list(map(Fraction, args))
         self.operator = operator
 
     @property
