@@ -38,7 +38,6 @@ if __name__ == "__main__":
     if method == "simplex":
         # Solve using the Simplex algorithm
         answer = simplex.solve()
-        print(answer)
         if answer.__class__ != NotFeasible:
             print(answer.values)
     elif method == "graphical":
